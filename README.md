@@ -92,7 +92,8 @@ src/
 
 后端API可通过内置的API数据结构自行制作。
 
-<span style="color: red; font-weight: bold;">谢绝外挂制作者使用本项目制作外挂雷达。</span>
+> [!CAUTION]
+> 谢绝外挂制作者使用本项目制作外挂雷达!
 
 ## 许可证
 
