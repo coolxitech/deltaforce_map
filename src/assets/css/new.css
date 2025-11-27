@@ -1,0 +1,202 @@
+.map-icon-bg {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    /* border: 2px solid #fff; */
+    overflow: hidden;
+    position: relative;
+}
+.map-icon-bg2 {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    overflow: hidden;
+    position: relative;
+}
+.map-icon-bg2 img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.leaflet-marker-icon .map-icon-bg2 {
+    position: relative;
+    left: 50%;
+    top: 50%;
+    -webkit-transform: translate3d(-50%, -50%, 0);
+    transform: translate3d(-50%, -50%, 0);
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-box-align: center;
+    -webkit-align-items: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -webkit-justify-content: center;
+    justify-content: center;
+}
+.leaflet-marker-icon .map-icon-bg2 img {
+    width: 100%;
+    height: 100%;
+}
+.leaflet-marker-icon.click .map-icon-bg2 img {
+    width: 70%;
+    height: 70%;
+}
+.leaflet-marker-icon.click .map-icon-bg2 {
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABBCAYAAABhNaJ7AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA3NpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDYuMC1jMDAyIDc5LjE2NDQ4OCwgMjAyMC8wNy8xMC0yMjowNjo1MyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDplZTA5ZjNjNS1iZmNkLWRiNGMtYjM5YS1hMGVjYTIzYzNkODAiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6RTYxMTkzRDkzOUU5MTFFRjkxMjRDMzBCNjczNDY2QzAiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6RTYxMTkzRDgzOUU5MTFFRjkxMjRDMzBCNjczNDY2QzAiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDI1LjQgKFdpbmRvd3MpIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6ODQ0YWM1NmEtNjUzYS1iNjRjLWE0MzctZTViZWQwYTFhZDUyIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOmVlMDlmM2M1LWJmY2QtZGI0Yy1iMzlhLWEwZWNhMjNjM2Q4MCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PqirpQUAAAFjSURBVHja7Nw9LARBFMDx9+Q+9sQSObcXkUiQCIWWil4EPYmOTqdV6UToFKJTiEIprtBqNTrNhcblsLmCbHLcjb1zkegmqmX+r3iZYibZ+b15yU6xq33RobgcqXZ+er0XI2q7yMwc7CduJ7OjA7q3vGY9vxZVZLww/QVQ6BmWhmlK/ePdcvlk4gDqjX7xs4HVXC+dEWO81lA7LWDk9vHBLB2XXDj2erO1Ehc7kqIfdInjAQAAAAAAAAAAOH4XMOtnp/L8pq5s2myel0S1pierncvQ1V01zjlnyn5dDuMc0gIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADw/4PvBWgBAAAAAAAAAADA1Uh9j8bygV5uLNgsMvNHF4nbydSgr7uLc1Zz/WxOXuI3wR8A3RlPJopDf7aUvV76N8/fvguYkZ18a+zY6W9qeTtU1/8f8CnAANtQUi5zhUdAAAAAAElFTkSuQmCC");
+    width: 0.54167rem;
+    height: 0.54167rem;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 0.54167rem auto;
+}
+.img_map_type_fhdd {
+    /*background-image: url() !important;*/
+    width: 1.6rem;
+    height: 0.795rem;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 1.6rem auto;
+}
+.map-icon-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.map-rotate {
+    transform-origin: center center;
+    transition: transform 0.5s ease;
+}
+.detail-text {
+    margin-left: -15px;
+    font-size: 0.12rem;
+    color: #ffffff;
+    white-space: nowrap;
+    font-weight: 200;
+    opacity: 0.85;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; /* 添加黑色描边 */
+}
+.detail-background {
+    background-color: #000000;
+}
+.demo-color-block {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.demo-color-block .demonstration {
+    margin-right: 16px;
+}
+.map-item-name {
+    position: absolute;
+    font-size: 0.14rem;
+    white-space: nowrap;
+    font-weight: 600;
+    -webkit-transform: translate3d(-50%, -50%, 0);
+    transform: translate3d(-50%, -50%, 0);
+}
+.health-bar {
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 5px;
+    background-color: #ccc;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.health-bar-inner {
+    height: 100%;
+    border-radius: 3px;
+}
+@media only screen and (max-width: 767px) {
+    .radar_content {
+        padding: 20px;
+        padding-left: 0;
+        margin: 0 auto;
+        max-width: 1200px; /* 可根据需要调整最大宽度 */
+    }
+}
+@media only screen and (min-width: 768px) {
+    .radar_content {
+        padding: 20px;
+        padding-left: 30%;
+        margin: 0 auto;
+        max-width: 1200px; /* 可根据需要调整最大宽度 */
+    }
+}
+.team-id {
+    position: absolute;
+    top: -45px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 2px 4px;
+    border-radius: 50%;
+    text-align: center;
+    font-size: 0.12rem;
+    width: 16px;
+    height: 20px;
+    line-height: 20px;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+.itemName {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 2px 4px;
+    border-radius: 50%;
+    text-align: center;
+    font-size: 0.12rem;
+    width: 16px;
+    height: 20px;
+    line-height: 20px;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+.height-indicator {
+    position: absolute;
+    top: -10px;
+    left: 45px;
+    transform: translateX(-50%);
+    display: flex; /* 使用 flexbox */
+    justify-content: flex-end; /* 将内容移动到右边 */
+    align-items: center; /* 垂直居中 */
+    padding: 2px 4px;
+    border-radius: 50%;
+    white-space: nowrap;
+    font-size: 0.12rem;
+    width: 16px;
+    height: 20px;
+    line-height: 20px;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+}
+
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    color: white;
+    font-size: 0.2rem;
+    display: none;
+    /* 默认隐藏 */
+}
+
+.loading-spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
