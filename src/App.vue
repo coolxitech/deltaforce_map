@@ -239,7 +239,14 @@ if (address?.value) {
   <VideoSplash />
   <div class="app-container">
     <!-- 透明导航栏（左上 Logo） -->
-    <div class="navbar">
+    <div
+        class="navbar"
+        :class="{ 'panel-open': settingVisible}"
+        :style="{
+          zIndex: settingVisible ? 1 : 999999,
+          pointerEvents: settingVisible ? 'none' : 'auto',
+        }"
+    >
       <div class="logo">
         <img src="@/assets/images/logo.png" alt="logo"/>
       </div>
@@ -352,5 +359,16 @@ if (address?.value) {
   background: rgba(0, 0, 0, 0.2);
   pointer-events: none;
   z-index: 1;
+}
+
+/* 当设置面板打开时，强制压低 navbar 层级并隐藏 logo */
+.panel-open {
+  z-index: 1 !important;
+  pointer-events: none !important;
+}
+
+.panel-open .logo {
+  opacity: 0 !important;     /* 彻底隐藏 logo（推荐） */
+  /* 或者如果你想保留一点存在感：opacity: 0.1; */
 }
 </style>

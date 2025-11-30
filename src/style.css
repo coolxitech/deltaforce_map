@@ -20,3 +20,11 @@ body,
     overflow: hidden;
     font-family: Avenir, Helvetica, Arial, sans-serif;
 }
+
+body > .el-overlay,
+body > .el-popup,
+body > .el-popper,
+body > .el-select-dropdown,
+body > .el-color-dropdown {
+    z-index: 10000 !important;   /* 比你的设置面板（9999）更高 */
+}
