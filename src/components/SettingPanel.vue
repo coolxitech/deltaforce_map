@@ -50,450 +50,455 @@ const showMobileMenu = ref(false);
 </script>
 
 <template>
-  <el-dialog
-      :width="dialogWidth"
-      :show-close="false"
-      :close-on-click-modal="false"
-      class="settings-dialog"
-      :model-value="modelValue"
-      @update:model-value="$emit('update:modelValue', $event)"
-      v-bind="$attrs"
-  >
-    <div class="settings-container">
-      <!-- 关闭按钮 - 移动端隐藏 -->
-      <div class="close-button" @click="$emit('update:modelValue', false)">
-        <el-icon>
-          <Close />
-        </el-icon>
-      </div>
+  <teleport to="body">
+    <transition name="fade">
+      <div
+          v-if="modelValue"
+          class="custom-dialog-overlay"
+          @click.self="$emit('update:modelValue', false)"
+      >
+        <div
+            class="settings-container"
+            @click.stop
+            :style="{ width: dialogWidth }"
+        >
+          <!-- 关闭按钮 - 移动端隐藏 -->
+          <div class="close-button" @click="$emit('update:modelValue', false)">
+            <el-icon>
+              <Close />
+            </el-icon>
+          </div>
 
-      <!-- 左侧图标导航栏 -->
-      <div class="settings-sidebar">
-        <!-- Logo -->
-        <div class="sidebar-logo">
-          <img src="@/assets/images/logo_small.png" alt="Logo"/>
-        </div>
-
-        <div class="sidebar-icon" @click="activeTab = 'match'"
-             :class="{ active: activeTab === 'match' }">
-          <FontAwesomeIcon icon="fa-solid fa-cog"></FontAwesomeIcon>
-        </div>
-        <div class="sidebar-icon" @click="activeTab = 'character'"
-             :class="{ active: activeTab === 'character' }">
-          <FontAwesomeIcon icon="fa-solid fa-user"></FontAwesomeIcon>
-        </div>
-        <div class="sidebar-icon" @click="activeTab = 'ai'"
-             :class="{ active: activeTab === 'ai' }">
-          <FontAwesomeIcon icon="fa-solid fa-robot"></FontAwesomeIcon>
-        </div>
-        <div class="sidebar-icon" @click="activeTab = 'materials'"
-             :class="{ active: activeTab === 'materials' }">
-          <FontAwesomeIcon icon="fa-solid fa-box"></FontAwesomeIcon>
-        </div>
-        <div class="sidebar-icon" @click="activeTab = 'box'"
-             :class="{ active: activeTab === 'box' }">
-          <FontAwesomeIcon icon="fa-solid fa-cube"></FontAwesomeIcon>
-        </div>
-        <div class="sidebar-icon" @click="activeTab = 'misc'"
-             :class="{ active: activeTab === 'misc' }">
-          <FontAwesomeIcon icon="fa-solid fa-cogs"></FontAwesomeIcon>
-        </div>
-      </div>
-
-      <!-- 右侧内容区域 -->
-      <div class="settings-right">
-        <!-- 移动端标题栏 - 使用计算属性 -->
-        <div class="mobile-header" v-if="isMobile">
-          <div class="mobile-header-left">
-            <button class="mobile-menu-btn" @click="showMobileMenu = !showMobileMenu">
-              <FontAwesomeIcon icon="fa-solid fa-bars"></FontAwesomeIcon>
-            </button>
-            <div class="mobile-header-title">雷达设置</div>
-          </div>
-          <button class="mobile-close-btn" @click="$emit('update:modelValue', false)">
-            <FontAwesomeIcon icon="fa-solid fa-times"></FontAwesomeIcon>
-          </button>
-        </div>
-
-        <!-- 移动端菜单 -->
-        <div class="mobile-menu" v-if="showMobileMenu">
-          <div class="mobile-menu-item"
-               @click="activeTab = 'match'; showMobileMenu = false">
-            <FontAwesomeIcon icon="fa-solid fa-cog"></FontAwesomeIcon>
-            <span>对局信息</span>
-          </div>
-          <div class="mobile-menu-item"
-               @click="activeTab = 'character'; showMobileMenu = false">
-            <FontAwesomeIcon icon="fa-solid fa-user"></FontAwesomeIcon>
-            <span>角色信息</span>
-          </div>
-          <div class="mobile-menu-item" @click="activeTab = 'ai'; showMobileMenu = false">
-            <FontAwesomeIcon icon="fa-solid fa-robot"></FontAwesomeIcon>
-            <span>AI信息</span>
-          </div>
-          <div class="mobile-menu-item"
-               @click="activeTab = 'materials'; showMobileMenu = false">
-            <FontAwesomeIcon icon="fa-solid fa-box"></FontAwesomeIcon>
-            <span>物资显示</span>
-          </div>
-          <div class="mobile-menu-item"
-               @click="activeTab = 'box'; showMobileMenu = false">
-            <FontAwesomeIcon icon="fa-solid fa-cube"></FontAwesomeIcon>
-            <span>盒子显示</span>
-          </div>
-          <div class="mobile-menu-item"
-               @click="activeTab = 'misc'; showMobileMenu = false">
-            <FontAwesomeIcon icon="fa-solid fa-cogs"></FontAwesomeIcon>
-            <span>杂项</span>
-          </div>
-        </div>
-
-
-        <!-- 主内容区域 -->
-        <div class="settings-main">
-          <!-- 顶部标签页导航 -->
-          <div class="tab-navigation">
-            <div class="tab-item" :class="{ active: activeTab === 'match' }"
-                 @click="activeTab = 'match'">对局信息
+          <!-- 左侧图标导航栏 -->
+          <div class="settings-sidebar">
+            <!-- Logo -->
+            <div class="sidebar-logo">
+              <img src="@/assets/images/logo_small.png" alt="Logo"/>
             </div>
-            <div class="tab-item" :class="{ active: activeTab === 'character' }"
-                 @click="activeTab = 'character'">角色信息
+
+            <div class="sidebar-icon" @click="activeTab = 'match'"
+                 :class="{ active: activeTab === 'match' }">
+              <FontAwesomeIcon icon="fa-solid fa-cog"></FontAwesomeIcon>
             </div>
-            <div class="tab-item" :class="{ active: activeTab === 'ai' }"
-                 @click="activeTab = 'ai'">AI信息
+            <div class="sidebar-icon" @click="activeTab = 'character'"
+                 :class="{ active: activeTab === 'character' }">
+              <FontAwesomeIcon icon="fa-solid fa-user"></FontAwesomeIcon>
             </div>
-            <div class="tab-item" :class="{ active: activeTab === 'materials' }"
-                 @click="activeTab = 'materials'">物资显示
+            <div class="sidebar-icon" @click="activeTab = 'ai'"
+                 :class="{ active: activeTab === 'ai' }">
+              <FontAwesomeIcon icon="fa-solid fa-robot"></FontAwesomeIcon>
             </div>
-            <div class="tab-item" :class="{ active: activeTab === 'box' }"
-                 @click="activeTab = 'box'">盒子显示
+            <div class="sidebar-icon" @click="activeTab = 'materials'"
+                 :class="{ active: activeTab === 'materials' }">
+              <FontAwesomeIcon icon="fa-solid fa-box"></FontAwesomeIcon>
             </div>
-            <div class="tab-item" :class="{ active: activeTab === 'misc' }"
-                 @click="activeTab = 'misc'">杂项
+            <div class="sidebar-icon" @click="activeTab = 'box'"
+                 :class="{ active: activeTab === 'box' }">
+              <FontAwesomeIcon icon="fa-solid fa-cube"></FontAwesomeIcon>
+            </div>
+            <div class="sidebar-icon" @click="activeTab = 'misc'"
+                 :class="{ active: activeTab === 'misc' }">
+              <FontAwesomeIcon icon="fa-solid fa-cogs"></FontAwesomeIcon>
             </div>
           </div>
 
-          <!-- 内容区域 -->
-          <div class="settings-content">
-            <div class="content-columns">
-              <!-- 左列 -->
-              <div class="content-left">
-                <!-- 对局信息 -->
-                <div v-if="activeTab === 'match'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>对局信息:</span>
-                      </div>
-                    </template>
-                    <div class="switch-group">
-                      <div>
-                        <el-text class="mx-1">角度跟随:</el-text>
-                        <el-switch v-model="playerSetting.info.angle"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">视线跟随:</el-text>
-                        <el-switch v-model="playerSetting.info.sightFollow"/>
-                      </div>
-                    </div>
-                  </el-card>
+          <!-- 右侧内容区域 -->
+          <div class="settings-right">
+            <!-- 移动端标题栏 - 使用计算属性 -->
+            <div class="mobile-header" v-if="isMobile">
+              <div class="mobile-header-left">
+                <button class="mobile-menu-btn" @click="showMobileMenu = !showMobileMenu">
+                  <FontAwesomeIcon icon="fa-solid fa-bars"></FontAwesomeIcon>
+                </button>
+                <div class="mobile-header-title">雷达设置</div>
+              </div>
+              <button class="mobile-close-btn" @click="$emit('update:modelValue', false)">
+                <FontAwesomeIcon icon="fa-solid fa-times"></FontAwesomeIcon>
+              </button>
+            </div>
+
+            <!-- 移动端菜单 -->
+            <div class="mobile-menu" v-if="showMobileMenu">
+              <div class="mobile-menu-item"
+                   @click="activeTab = 'match'; showMobileMenu = false">
+                <FontAwesomeIcon icon="fa-solid fa-cog"></FontAwesomeIcon>
+                <span>对局信息</span>
+              </div>
+              <div class="mobile-menu-item"
+                   @click="activeTab = 'character'; showMobileMenu = false">
+                <FontAwesomeIcon icon="fa-solid fa-user"></FontAwesomeIcon>
+                <span>角色信息</span>
+              </div>
+              <div class="mobile-menu-item" @click="activeTab = 'ai'; showMobileMenu = false">
+                <FontAwesomeIcon icon="fa-solid fa-robot"></FontAwesomeIcon>
+                <span>AI信息</span>
+              </div>
+              <div class="mobile-menu-item"
+                   @click="activeTab = 'materials'; showMobileMenu = false">
+                <FontAwesomeIcon icon="fa-solid fa-box"></FontAwesomeIcon>
+                <span>物资显示</span>
+              </div>
+              <div class="mobile-menu-item"
+                   @click="activeTab = 'box'; showMobileMenu = false">
+                <FontAwesomeIcon icon="fa-solid fa-cube"></FontAwesomeIcon>
+                <span>盒子显示</span>
+              </div>
+              <div class="mobile-menu-item"
+                   @click="activeTab = 'misc'; showMobileMenu = false">
+                <FontAwesomeIcon icon="fa-solid fa-cogs"></FontAwesomeIcon>
+                <span>杂项</span>
+              </div>
+            </div>
+
+
+            <!-- 主内容区域 -->
+            <div class="settings-main">
+              <!-- 顶部标签页导航 -->
+              <div class="tab-navigation">
+                <div class="tab-item" :class="{ active: activeTab === 'match' }"
+                     @click="activeTab = 'match'">对局信息
                 </div>
-
-                <!-- 角色信息 -->
-                <div v-if="activeTab === 'character'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>角色信息:</span>
-                      </div>
-                    </template>
-                    <div class="switch-group">
-                      <div>
-                        <el-text class="mx-1">名字:</el-text>
-                        <el-switch v-model="playerSetting.info.name"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">武器:</el-text>
-                        <el-switch v-model="playerSetting.info.weapon"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">血量:</el-text>
-                        <el-switch v-model="playerSetting.info.health"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">护甲:</el-text>
-                        <el-switch v-model="playerSetting.info.armor"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">队友:</el-text>
-                        <el-switch v-model="playerSetting.info.teammate"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">视角线:</el-text>
-                        <el-switch v-model="playerSetting.info.angleViewLine"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">层高:</el-text>
-                        <el-switch v-model="playerSetting.info.storyHeight"/>
-                      </div>
-                    </div>
-                  </el-card>
+                <div class="tab-item" :class="{ active: activeTab === 'character' }"
+                     @click="activeTab = 'character'">角色信息
                 </div>
-
-                <!-- AI信息 -->
-                <div v-if="activeTab === 'ai'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>AI信息:</span>
-                      </div>
-                    </template>
-                    <div class="switch-group">
-                      <div>
-                        <el-text class="mx-1">显示AI:</el-text>
-                        <el-switch v-model="botSetting.info.display"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">显示BOSS:</el-text>
-                        <el-switch v-model="botSetting.info.displayBoss"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">AI名称:</el-text>
-                        <el-switch v-model="botSetting.info.name"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">血量:</el-text>
-                        <el-switch v-model="botSetting.info.health"/>
-                      </div>
-                    </div>
-                  </el-card>
+                <div class="tab-item" :class="{ active: activeTab === 'ai' }"
+                     @click="activeTab = 'ai'">AI信息
                 </div>
-
-                <!-- 物资显示 -->
-                <div v-if="activeTab === 'materials'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>物资显示:</span>
-                      </div>
-                    </template>
-                    <div class="switch-group">
-                      <div>
-                        <el-text class="mx-1">显示物品:</el-text>
-                        <el-switch v-model="itemSetting.info.display"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">物品名称:</el-text>
-                        <el-switch v-model="itemSetting.info.name"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">物品价值:</el-text>
-                        <el-switch v-model="itemSetting.info.price"/>
-                      </div>
-                    </div>
-                    <div class="divider"></div>
-                    <el-text class="mx-1">物品过滤价值:</el-text>
-                    <div class="divider"></div>
-                    <el-input-number v-model="itemSetting.info.filter" :step="1" step-strictly/>
-                  </el-card>
+                <div class="tab-item" :class="{ active: activeTab === 'materials' }"
+                     @click="activeTab = 'materials'">物资显示
                 </div>
-
-                <!-- 盒子显示 -->
-                <div v-if="activeTab === 'box'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>盒子显示:</span>
-                      </div>
-                    </template>
-                    <div class="switch-group">
-                      <div>
-                        <el-text class="mx-1">显示玩家盒子:</el-text>
-                        <el-switch v-model="boxSetting.player"/>
-                      </div>
-                      <div>
-                        <el-text class="mx-1">显示AI盒子:</el-text>
-                        <el-switch v-model="boxSetting.bot"/>
-                      </div>
-                    </div>
-                  </el-card>
+                <div class="tab-item" :class="{ active: activeTab === 'box' }"
+                     @click="activeTab = 'box'">盒子显示
                 </div>
-
-                <!-- 杂项设置 -->
-                <div v-if="activeTab === 'misc'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>杂项设置:</span>
-                      </div>
-                    </template>
-                    <div class="slider-group">
-                      <div class="slider-item">
-                        <el-text class="mx-1">玩家头像大小:
-                          {{ otherSetting.playerAvatarSize }}px
-                        </el-text>
-                        <el-slider v-model="otherSetting.playerAvatarSize" :min="25"
-                                   :max="30" :step="1" show-input/>
-                      </div>
-                      <div class="slider-item">
-                        <el-text class="mx-1">射线长度: {{ otherSetting.rayLength }}px
-                        </el-text>
-                        <el-slider v-model="otherSetting.rayLength" :min="1" :max="30"
-                                   :step="1" show-input/>
-                      </div>
-                    </div>
-                    <div class="divider"></div>
-                    <div class="slider-group">
-                      <div class="slider-item">
-                        <el-text class="mx-1">射线透明度: {{ otherSetting.rayOpacity }}
-                        </el-text>
-                        <el-slider v-model="otherSetting.rayOpacity" :min="0.1"
-                                   :max="1.0" :step="0.05" :precision="2"
-                                   show-input/>
-                      </div>
-                      <div class="slider-item">
-                        <el-text class="mx-1">射线宽度: {{ otherSetting.rayWidth }}px
-                        </el-text>
-                        <el-slider v-model="otherSetting.rayWidth" :min="1" :max="8"
-                                   :step="1" show-input/>
-                      </div>
-                    </div>
-                    <div class="divider"></div>
-                    <div class="slider-group">
-                      <div class="slider-item">
-                        <el-text class="mx-1">队友选择器大小:
-                          {{ otherSetting.teammateSelectorSize }}%
-                        </el-text>
-                        <el-slider v-model="otherSetting.teammateSelectorSize" :min="50"
-                                   :max="150" :step="5" show-input/>
-                      </div>
-                    </div>
-                  </el-card>
+                <div class="tab-item" :class="{ active: activeTab === 'misc' }"
+                     @click="activeTab = 'misc'">杂项
                 </div>
               </div>
 
-              <!-- 右列 -->
-              <div class="content-right">
-                <!-- 对局信息颜色设置 -->
-                <div v-if="activeTab === 'match'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>颜色设置:</span>
-                      </div>
-                    </template>
-                    <div class="color-settings">
-                      <!-- 对局信息暂时没有颜色设置 -->
-                      <div class="empty-state">
-                        <el-text class="mx-1">暂无颜色设置</el-text>
-                      </div>
+              <!-- 内容区域 -->
+              <div class="settings-content">
+                <div class="content-columns">
+                  <!-- 左列 -->
+                  <div class="content-left">
+                    <!-- 对局信息 -->
+                    <div v-if="activeTab === 'match'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>对局信息:</span>
+                          </div>
+                        </template>
+                        <div class="switch-group">
+                          <div>
+                            <el-text class="mx-1">角度跟随:</el-text>
+                            <el-switch v-model="playerSetting.info.angle"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">视线跟随:</el-text>
+                            <el-switch v-model="playerSetting.info.sightFollow"/>
+                          </div>
+                        </div>
+                      </el-card>
                     </div>
-                  </el-card>
-                </div>
 
-                <!-- 角色信息颜色设置 -->
-                <div v-if="activeTab === 'character'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>颜色设置:</span>
-                      </div>
-                    </template>
-                    <div class="color-settings">
-                      <div class="color-item">
-                        <label>视角线颜色</label>
-                        <el-color-picker v-model="playerSetting.color.angleViewLine"/>
-                      </div>
+                    <!-- 角色信息 -->
+                    <div v-if="activeTab === 'character'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>角色信息:</span>
+                          </div>
+                        </template>
+                        <div class="switch-group">
+                          <div>
+                            <el-text class="mx-1">名字:</el-text>
+                            <el-switch v-model="playerSetting.info.name"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">武器:</el-text>
+                            <el-switch v-model="playerSetting.info.weapon"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">血量:</el-text>
+                            <el-switch v-model="playerSetting.info.health"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">护甲:</el-text>
+                            <el-switch v-model="playerSetting.info.armor"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">队友:</el-text>
+                            <el-switch v-model="playerSetting.info.teammate"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">视角线:</el-text>
+                            <el-switch v-model="playerSetting.info.angleViewLine"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">层高:</el-text>
+                            <el-switch v-model="playerSetting.info.storyHeight"/>
+                          </div>
+                        </div>
+                      </el-card>
                     </div>
-                  </el-card>
-                </div>
 
-                <!-- AI信息颜色设置 -->
-                <div v-if="activeTab === 'ai'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>颜色设置:</span>
-                      </div>
-                    </template>
-                    <div class="color-settings">
-                      <!-- AI信息暂时没有颜色设置 -->
-                      <div class="empty-state">
-                        <el-text class="mx-1">暂无颜色设置</el-text>
-                      </div>
+                    <!-- AI信息 -->
+                    <div v-if="activeTab === 'ai'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>AI信息:</span>
+                          </div>
+                        </template>
+                        <div class="switch-group">
+                          <div>
+                            <el-text class="mx-1">显示AI:</el-text>
+                            <el-switch v-model="botSetting.info.display"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">显示BOSS:</el-text>
+                            <el-switch v-model="botSetting.info.displayBoss"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">AI名称:</el-text>
+                            <el-switch v-model="botSetting.info.name"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">血量:</el-text>
+                            <el-switch v-model="botSetting.info.health"/>
+                          </div>
+                        </div>
+                      </el-card>
                     </div>
-                  </el-card>
-                </div>
 
-                <!-- 物资显示颜色设置 -->
-                <div v-if="activeTab === 'materials'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>颜色设置:</span>
-                      </div>
-                    </template>
-                    <div class="color-settings">
-                      <div class="color-item">
-                        <label>白色物品</label>
-                        <el-color-picker v-model="itemSetting.color[1]"/>
-                      </div>
-                      <div class="color-item">
-                        <label>绿色物品</label>
-                        <el-color-picker v-model="itemSetting.color[2]"/>
-                      </div>
-                      <div class="color-item">
-                        <label>蓝色物品</label>
-                        <el-color-picker v-model="itemSetting.color[3]"/>
-                      </div>
-                      <div class="color-item">
-                        <label>紫色物品</label>
-                        <el-color-picker v-model="itemSetting.color[4]"/>
-                      </div>
-                      <div class="color-item">
-                        <label>金色物品</label>
-                        <el-color-picker v-model="itemSetting.color[5]"/>
-                      </div>
-                      <div class="color-item">
-                        <label>红色物品</label>
-                        <el-color-picker v-model="itemSetting.color[6]"/>
-                      </div>
+                    <!-- 物资显示 -->
+                    <div v-if="activeTab === 'materials'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>物资显示:</span>
+                          </div>
+                        </template>
+                        <div class="switch-group">
+                          <div>
+                            <el-text class="mx-1">显示物品:</el-text>
+                            <el-switch v-model="itemSetting.info.display"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">物品名称:</el-text>
+                            <el-switch v-model="itemSetting.info.name"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">物品价值:</el-text>
+                            <el-switch v-model="itemSetting.info.price"/>
+                          </div>
+                        </div>
+                        <div class="divider"></div>
+                        <el-text class="mx-1">物品过滤价值:</el-text>
+                        <div class="divider"></div>
+                        <el-input-number v-model="itemSetting.info.filter" :step="1" step-strictly/>
+                      </el-card>
                     </div>
-                  </el-card>
-                </div>
 
-                <!-- 盒子显示颜色设置 -->
-                <div v-if="activeTab === 'box'" class="settings-section">
-                  <el-card class="settings-card">
-                    <template #header>
-                      <div class="card-header">
-                        <span>颜色设置:</span>
-                      </div>
-                    </template>
-                    <div class="color-settings">
-                      <div class="color-item">
-                        <label>玩家盒子颜色</label>
-                        <el-color-picker v-model="boxSetting.color.player"/>
-                      </div>
-                      <div class="color-item">
-                        <label>AI盒子颜色</label>
-                        <el-color-picker v-model="boxSetting.color.bot"/>
-                      </div>
+                    <!-- 盒子显示 -->
+                    <div v-if="activeTab === 'box'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>盒子显示:</span>
+                          </div>
+                        </template>
+                        <div class="switch-group">
+                          <div>
+                            <el-text class="mx-1">显示玩家盒子:</el-text>
+                            <el-switch v-model="boxSetting.player"/>
+                          </div>
+                          <div>
+                            <el-text class="mx-1">显示AI盒子:</el-text>
+                            <el-switch v-model="boxSetting.bot"/>
+                          </div>
+                        </div>
+                      </el-card>
                     </div>
-                  </el-card>
+
+                    <!-- 杂项设置 -->
+                    <div v-if="activeTab === 'misc'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>杂项设置:</span>
+                          </div>
+                        </template>
+                        <div class="slider-group">
+                          <div class="slider-item">
+                            <el-text class="mx-1">玩家头像大小:
+                              {{ otherSetting.playerAvatarSize }}px
+                            </el-text>
+                            <el-slider v-model="otherSetting.playerAvatarSize" :min="25"
+                                       :max="30" :step="1" show-input/>
+                          </div>
+                          <div class="slider-item">
+                            <el-text class="mx-1">射线长度: {{ otherSetting.rayLength }}px
+                            </el-text>
+                            <el-slider v-model="otherSetting.rayLength" :min="1" :max="30"
+                                       :step="1" show-input/>
+                          </div>
+                        </div>
+                        <div class="divider"></div>
+                        <div class="slider-group">
+                          <div class="slider-item">
+                            <el-text class="mx-1">射线透明度: {{ otherSetting.rayOpacity }}
+                            </el-text>
+                            <el-slider v-model="otherSetting.rayOpacity" :min="0.1"
+                                       :max="1.0" :step="0.05" :precision="2"
+                                       show-input/>
+                          </div>
+                          <div class="slider-item">
+                            <el-text class="mx-1">射线宽度: {{ otherSetting.rayWidth }}px
+                            </el-text>
+                            <el-slider v-model="otherSetting.rayWidth" :min="1" :max="8"
+                                       :step="1" show-input/>
+                          </div>
+                        </div>
+                        <div class="divider"></div>
+                        <div class="slider-group">
+                          <div class="slider-item">
+                            <el-text class="mx-1">队友选择器大小:
+                              {{ otherSetting.teammateSelectorSize }}%
+                            </el-text>
+                            <el-slider v-model="otherSetting.teammateSelectorSize" :min="50"
+                                       :max="150" :step="5" show-input/>
+                          </div>
+                        </div>
+                      </el-card>
+                    </div>
+                  </div>
+
+                  <!-- 右列 -->
+                  <div class="content-right">
+                    <!-- 对局信息颜色设置 -->
+                    <div v-if="activeTab === 'match'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>颜色设置:</span>
+                          </div>
+                        </template>
+                        <div class="color-settings">
+                          <!-- 对局信息暂时没有颜色设置 -->
+                          <div class="empty-state">
+                            <el-text class="mx-1">暂无颜色设置</el-text>
+                          </div>
+                        </div>
+                      </el-card>
+                    </div>
+
+                    <!-- 角色信息颜色设置 -->
+                    <div v-if="activeTab === 'character'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>颜色设置:</span>
+                          </div>
+                        </template>
+                        <div class="color-settings">
+                          <div class="color-item">
+                            <label>视角线颜色</label>
+                            <el-color-picker v-model="playerSetting.color.angleViewLine"/>
+                          </div>
+                        </div>
+                      </el-card>
+                    </div>
+
+                    <!-- AI信息颜色设置 -->
+                    <div v-if="activeTab === 'ai'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>颜色设置:</span>
+                          </div>
+                        </template>
+                        <div class="color-settings">
+                          <!-- AI信息暂时没有颜色设置 -->
+                          <div class="empty-state">
+                            <el-text class="mx-1">暂无颜色设置</el-text>
+                          </div>
+                        </div>
+                      </el-card>
+                    </div>
+
+                    <!-- 物资显示颜色设置 -->
+                    <div v-if="activeTab === 'materials'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>颜色设置:</span>
+                          </div>
+                        </template>
+                        <div class="color-settings">
+                          <div class="color-item">
+                            <label>白色物品</label>
+                            <el-color-picker v-model="itemSetting.color[1]"/>
+                          </div>
+                          <div class="color-item">
+                            <label>绿色物品</label>
+                            <el-color-picker v-model="itemSetting.color[2]"/>
+                          </div>
+                          <div class="color-item">
+                            <label>蓝色物品</label>
+                            <el-color-picker v-model="itemSetting.color[3]"/>
+                          </div>
+                          <div class="color-item">
+                            <label>紫色物品</label>
+                            <el-color-picker v-model="itemSetting.color[4]"/>
+                          </div>
+                          <div class="color-item">
+                            <label>金色物品</label>
+                            <el-color-picker v-model="itemSetting.color[5]"/>
+                          </div>
+                          <div class="color-item">
+                            <label>红色物品</label>
+                            <el-color-picker v-model="itemSetting.color[6]"/>
+                          </div>
+                        </div>
+                      </el-card>
+                    </div>
+
+                    <!-- 盒子显示颜色设置 -->
+                    <div v-if="activeTab === 'box'" class="settings-section">
+                      <el-card class="settings-card">
+                        <template #header>
+                          <div class="card-header">
+                            <span>颜色设置:</span>
+                          </div>
+                        </template>
+                        <div class="color-settings">
+                          <div class="color-item">
+                            <label>玩家盒子颜色</label>
+                            <el-color-picker v-model="boxSetting.color.player"/>
+                          </div>
+                          <div class="color-item">
+                            <label>AI盒子颜色</label>
+                            <el-color-picker v-model="boxSetting.color.bot"/>
+                          </div>
+                        </div>
+                      </el-card>
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="settings-footer">
+                <div class="footer-text">你强任你强，大哥背行囊</div>
               </div>
             </div>
           </div>
-
-          <!-- Footer -->
-          <div class="settings-footer">
-            <div class="footer-text">你强任你强，大哥背行囊</div>
-          </div>
         </div>
       </div>
-    </div>
-  </el-dialog>
+    </transition>
+  </teleport>
+
 </template>
 
 <style scoped>
@@ -1729,5 +1734,25 @@ const showMobileMenu = ref(false);
   .close-button i {
     font-size: 12px !important;
   }
+}
+
+.custom-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

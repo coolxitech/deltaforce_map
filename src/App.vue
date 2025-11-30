@@ -244,7 +244,7 @@ if (address?.value) {
         <img src="@/assets/images/logo.png" alt="logo"/>
       </div>
       <!-- 右上角普通按钮 -->
-      <div class="right-btn" @click="settingVisible = true">
+      <div class="right-btn" @click="settingVisible = true" v-show="!settingVisible">
         <el-icon color="#ffffff">
           <Setting/>
         </el-icon>
@@ -283,7 +283,7 @@ if (address?.value) {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 999999;
+  z-index: 1000;
   padding: 2vh 2vw;
   display: flex;
   justify-content: space-between; /* 左右分布 */
