@@ -41,9 +41,8 @@ const dialogWidth = computed(() => {
 });
 
 const isMobile = computed(() => {
-  const innerWidth = window.innerWidth;
   const ua = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  return ua || innerWidth <= 768 || innerWidth <= 1024;
+  return ua || window.innerWidth <= 768;   // ← 768 是最安全的移动端阈值
 });
 
 const showMobileMenu = ref(false);
@@ -1754,6 +1753,24 @@ const showMobileMenu = ref(false);
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ===== 彻底让所有 el-card 跟随你的深色主题（永不翻车）===== */
+.settings-container .el-card,
+.settings-container .el-card__header,
+.settings-container .el-card__body {
+  background-color: #101318 !important;
+  border-color: #404040 !important;
+}
+
+/* 卡片标题文字颜色也顺便提亮一下 */
+.settings-container .el-card__header .card-header span {
+  color: #ffffff !important;
+}
+
+/* 如果你还用了 el-divider（你代码里有 .divider） */
+.settings-container .el-divider--horizontal {
+  background-color: #404040 !important;
 }
 
 </style>
