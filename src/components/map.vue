@@ -2,7 +2,7 @@
 /* eslint-disable */
 import L, {DomUtil} from 'leaflet';
 import 'leaflet.zoomslider/src/L.Control.Zoomslider.js';
-import 'leaflet-rotate';
+import 'leaflet-rotate/dist/leaflet-rotate';
 //地图
 import {nextTick, onMounted, ref, watch} from "vue";
 import {
@@ -22,14 +22,15 @@ import {
   cgxgInfo,
   selectRegion_cgxg
 } from "@/lib/map_cgxg.js";
-import {Settings} from "@/store/settings.js";
+import {SettingStore} from "@/store/settingStore.js";
 import {storeToRefs} from "pinia";
 import $ from "jquery";
 import {Box, Item, Player} from "@/interface/GameData.ts";
 import getPosition = DomUtil.getPosition;
+import {getUrlParam} from "@/utils/url";
 
 /* eslint-disable */
-const settings = Settings();
+const settings = SettingStore();
 const {playerSetting, botSetting, itemSetting, boxSetting, otherSetting} = storeToRefs(settings);
 const props = defineProps({
   map: {
@@ -82,13 +83,8 @@ const browser = {
   })(),
   language: navigator.language.toLowerCase()
 };
-window.viewChange = true; // 进攻方视角
-window.occupy = false; // 占领模式
-window.warLv = 0; // 阶段
-window.isLvChange = false;
-window.warSwiper = null; // 部署swiper
-window.pervInitX = 0 // 上一次位移
 const regionList = $('.region-list');
+const AIM_HIT_DISTANCE_THRESHOLD = 50;
 
 function Page() {
   const _this = this;
@@ -194,6 +190,50 @@ let playerViewLines = new Map<string, L.Polyline>();
 let boxMarkers = new Map<string, L.Marker>();
 let itemMarkers = new Map<string, L.Marker>();
 
+/**
+ * 检查当前玩家的瞄准线是否击中任何其他玩家
+ * @param {Player} aimingPlayer - 正在瞄准的玩家
+ * @returns {string | null} 被瞄准玩家的名称，如果未击中则返回 null
+ */
+const checkAimHit = (aimingPlayer: Player): string | null => {
+
+  // 确保瞄准信息完整
+  if (aimingPlayer.position.angle == null) return null;
+
+  const { x: rayX, y: rayY } = getMapPos(aimingPlayer.position.x, aimingPlayer.position.y);
+
+  const angle = Number(aimingPlayer.position.angle) || 0;
+  const offset = currLayer.name === 'map_yc' ? -angle - 90 : -angle;
+  const rad = offset * Math.PI / 180;
+
+  const rayLength = otherSetting.value.rayLength;
+
+  // 瞄准线的终点 (End Point)
+  const endX = rayX + rayLength * Math.cos(rad);
+  const endY = rayY + rayLength * Math.sin(rad);
+  const endLatLng = L.latLng(endY, endX);
+
+  // 遍历所有其他玩家的 Marker 来检测碰撞
+  for (const [targetName, targetMarker] of playerMarkers.entries()) {
+    if (targetName === aimingPlayer.name) continue; // 不检测自己
+
+    // 1. 获取目标 Marker 的位置
+    const targetLatLng = targetMarker.getLatLng();
+
+    // 2. 简化碰撞检测：检查目标 Marker 是否在瞄准线的终点附近
+    // Leaflet 提供了距离计算方法
+    const distance = endLatLng.distanceTo(targetLatLng);
+
+    // 注意：distanceTo 返回的是米。由于您的 L.CRS.Simple 地图不是地理坐标，
+    // 这里的“米”实际上是您的地图单位。
+    if (distance < AIM_HIT_DISTANCE_THRESHOLD) {
+      return targetName; // 成功瞄准
+    }
+  }
+
+  return null; // 未瞄准任何玩家
+};
+
 const init = () => {
   return new Promise(() => {
     const mapWidth = isFloor ? mapScaleInfo.floorInfo.info.boundsW : mapScaleInfo.boundsW;
@@ -201,9 +241,9 @@ const init = () => {
     const mapOrigin = isWar ? L.latLng(0, -80) : L.latLng(0, 0);
     const pixelToLatLngRatio = -1;
     const southWest = mapOrigin; // 左上角
-    const northEast = L.latLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio); // 右下角
-    const bounds = L.latLngBounds(southWest, northEast);
-    map = L.map('MapContainer', {
+    const northEast = new L.LatLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio); // 右下角
+    const bounds = new L.LatLngBounds(southWest, northEast);
+    map = new L.Map('MapContainer', {
       crs: L.CRS.Simple,
       attributionControl: false,
       zoomControl: false,
@@ -224,7 +264,6 @@ const init = () => {
     }).setView([mapScaleInfo.initX, mapScaleInfo.initY], mapScaleInfo.initZoom);
     let control: L.Control = new L.Control.Zoomslider()
     map.addControl(control);
-    window.pervInitX = mapScaleInfo.initX
 
     addLayer('map_db');
   });
@@ -236,18 +275,11 @@ const addLayer = (mapName: string) => {
   let minZoom: number;
   let pixelToLatLngRatio: number;
   let southWest: any; // 左上角
-  if (window.occupy) {
-    mapWidth = mapScaleInfo.boundsW_s
-    mapHeight = mapScaleInfo.boundsH_s
-    southWest = L.latLng(0, 0)
-    pixelToLatLngRatio = -1
-  } else {
-    mapWidth = mapScaleInfo.boundsW
-    mapHeight = mapScaleInfo.boundsH
-    southWest = L.latLng(0, 0)
-    pixelToLatLngRatio = -1
-  }
-  const northEast = L.latLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio); // 右下角
+  mapWidth = mapScaleInfo.boundsW
+  mapHeight = mapScaleInfo.boundsH
+  southWest = new L.LatLng(0, 0)
+  pixelToLatLngRatio = -1
+  const northEast = new L.LatLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio); // 右下角
   let href: string;
   if (!isFloor && mapScaleInfo.href) {
     href = mapScaleInfo.href
@@ -257,11 +289,8 @@ const addLayer = (mapName: string) => {
     href = '//game.gtimg.cn/images/dfm/cp/a20240729directory/img/'
   }
 
-  if (window.occupy) {
-    minZoom = mapScaleInfo.minZoom_s
-  } else {
-    minZoom = mapScaleInfo.minZoom
-  }
+
+  minZoom = mapScaleInfo.minZoom
   // console.log(minZoom, initZoom);
   const bounds = L.latLngBounds(southWest, northEast);
   currLayer = L.tileLayer(href + `${mapName}/{z}_{x}_{y}.jpg`, {
@@ -278,7 +307,6 @@ const addLayer = (mapName: string) => {
   currLayer.name = mapName
   map.setMaxBounds(bounds)
   map.options.minZoom = minZoom;
-  window.pervInitX = window.occupy ? mapScaleInfo.initX_s : mapScaleInfo.initX
 
   $.each(poiList, function () {
     this.remove();
@@ -630,10 +658,10 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
   const itemGrade = item.grade || 1;
   const itemPrice = item.price ? (item.price / 1000).toFixed(1) + "K" : "";
   let itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png`;
-  if (itemId === '15080050152' || itemId === '15080050153' || itemId === '15080050154' || itemId === '15080050155' || itemId === '15080050156' || itemId === '15080050157' || itemId === '15080050158') {
+  if (itemId === '15080050152' || itemId === '15080050153' || itemId === '15080050154' || itemId === '15080050155' || itemId === '15080050156' || itemId === '15080050157' || itemId === '15080050158' || itemId === '150800501529') {
     itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/15080050161.png`;
   }
-  if (itemId === '15080050160') {
+  if (itemId === '15080050160' || itemId === '15080050159') {
     itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/15200000031.png`;
   }
 
@@ -717,7 +745,7 @@ watch(
         // 这一步必须提前！不管是否画线，都要记录这个玩家存在
         currentNames.add(player.name)
 
-        const {x, y} = getMapPos(player.position.x, player.position.y)
+        const {x, y} = getUrlParam('type') !== 'ray' ? getMapPos(player.position.x, player.position.y) : { x: player.position.x, y: player.position.y}
         const latlng = L.latLng(y, x)
 
         // ========= 1. 玩家 Marker：永远更新，与视角线开关无关 =========
@@ -751,14 +779,26 @@ watch(
           const endX = rayX + rayLength * Math.cos(rad);
           const endY = rayY + rayLength * Math.sin(rad);
 
+          // *** 碰撞检测核心 ***
+          const targetName = checkAimHit(player as Player);
+          const isAimingAtPlayer = targetName !== null;
+
+          // 根据是否瞄准来设置线条样式
+          const dashArray = isAimingAtPlayer ? '20, 10' : '8, 8'; // 长虚线
+          const opacity = isAimingAtPlayer ? 1.0 : otherSetting.value.rayOpacity; // 击中时更显眼
           const oldLine = playerViewLines.get(player.name)
           if (oldLine) {
             oldLine.setLatLngs([[rayY, rayX], [endY, endX]])
+            oldLine.setStyle({
+              dashArray: dashArray,
+              opacity: opacity,
+            });
           } else {
             const line = L.polyline([[rayY, rayX], [endY, endX]], {
               color: playerSetting.value.color.angleViewLine,
-              opacity: otherSetting.value.rayOpacity,
+              opacity: opacity,
               weight: otherSetting.value.rayWidth,
+              dashArray: dashArray,
               interactive: false
             }).addTo(map)
             playerViewLines.set(player.name, line)
