@@ -49,7 +49,7 @@ interface MapConfig {
 const MAP_CONFIG_TABLE: Record<number, MapConfig> = {
     0: { name: '', offset: { x: 0, y: 0 } },
     1: { name: 'daba', offset: { x: 357385, y: -769888 } },   // 零号大坝
-    2: { name: 'cgxg', offset: { x: 0, y: 0 } },             // 长弓溪谷（暂无偏移）
+    2: { name: 'cgxg', offset: { x: 400062, y: -641652 } },             // 长弓溪谷（暂无偏移）
     3: { name: 'bks',  offset: { x: 378673, y: -448841 } },  // 巴克什
     4: { name: 'htjd', offset: { x: 668720, y: -452754 } },  // 航天基地
     5: { name: 'cxjy', offset: { x: 53272,  y: -51971 } },    // 潮汐监狱
