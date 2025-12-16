@@ -5,10 +5,10 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 library.add(fas);
 import {computed, ref, toRefs} from "vue";
-import {Settings} from "@/store/settings.js";
+import {SettingStore} from "@/store/settingStore.js";
 import {storeToRefs} from "pinia";
 
-const settings = Settings()
+const settings = SettingStore()
 const {
   playerSetting,
   botSetting,

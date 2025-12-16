@@ -1,8 +1,8 @@
 import {defineStore} from "pinia";
-import axios from "axios";
 
-export const Settings = defineStore("settings", {
+export const SettingStore = defineStore("settings", {
     state: () => ({
+        type: 'un',
         playerNum: 0,
         mapId: 0,
         loading: true,

@@ -59,8 +59,6 @@ export const selectRegion = [
         y: "-795599.500000",
     },
 ]
-// 全部
-// 全部
 export const navList = [
     {
         titleType: 'all',
