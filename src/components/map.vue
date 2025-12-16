@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/* eslint-disable */
+import 'leaflet-polylinedecorator';
 import L, {DomUtil} from 'leaflet';
 import 'leaflet.zoomslider/src/L.Control.Zoomslider.js';
 import 'leaflet-rotate/dist/leaflet-rotate';
@@ -84,7 +84,6 @@ const browser = {
   language: navigator.language.toLowerCase()
 };
 const regionList = $('.region-list');
-const AIM_HIT_DISTANCE_THRESHOLD = 50;
 
 function Page() {
   const _this = this;
@@ -133,6 +132,7 @@ let mapScaleInfo: any = dabaInfo;
 // 当前地图
 let currLayer: any;
 let isFloor: boolean;
+let playerArrowDecorators = new Map<string, L.PolylineDecorator>();
 const getMapPos = (posX: number, posY: number) => {
   if (currLayer.name === 'bks_1f' || currLayer.name === 'map_bks2') {
     // console.log(posX, posY);
@@ -191,47 +191,66 @@ let boxMarkers = new Map<string, L.Marker>();
 let itemMarkers = new Map<string, L.Marker>();
 
 /**
- * 检查当前玩家的瞄准线是否击中任何其他玩家
- * @param {Player} aimingPlayer - 正在瞄准的玩家
- * @returns {string | null} 被瞄准玩家的名称，如果未击中则返回 null
+ * 检查当前玩家的瞄准射线是否击中任何其他玩家（基于射线到点的最近距离）
+ * @param aimingPlayer - 正在瞄准的玩家
+ * @returns 被瞄准玩家的名称，或 null
  */
 const checkAimHit = (aimingPlayer: Player): string | null => {
-
-  // 确保瞄准信息完整
   if (aimingPlayer.position.angle == null) return null;
 
-  const { x: rayX, y: rayY } = getMapPos(aimingPlayer.position.x, aimingPlayer.position.y);
-
+  const { x: startX, y: startY } = getMapPos(aimingPlayer.position.x, aimingPlayer.position.y);
   const angle = Number(aimingPlayer.position.angle) || 0;
   const offset = currLayer.name === 'map_yc' ? -angle - 90 : -angle;
   const rad = offset * Math.PI / 180;
 
-  const rayLength = otherSetting.value.rayLength;
+  // 射线方向向量（单位向量）
+  const dirX = Math.cos(rad);
+  const dirY = Math.sin(rad);
 
-  // 瞄准线的终点 (End Point)
-  const endX = rayX + rayLength * Math.cos(rad);
-  const endY = rayY + rayLength * Math.sin(rad);
-  const endLatLng = L.latLng(endY, endX);
+  // 我们用一个足够长的射线长度来模拟“无限远”（比如 5000，远超地图）
+  const FAR_DISTANCE = 5000;
+  const endX = startX + FAR_DISTANCE * dirX;
+  const endY = startY + FAR_DISTANCE * dirY;
 
-  // 遍历所有其他玩家的 Marker 来检测碰撞
+  let closestTarget: string | null = null;
+  let closestDist = Infinity;
+
   for (const [targetName, targetMarker] of playerMarkers.entries()) {
-    if (targetName === aimingPlayer.name) continue; // 不检测自己
+    if (targetName === aimingPlayer.name) continue;
 
-    // 1. 获取目标 Marker 的位置
-    const targetLatLng = targetMarker.getLatLng();
+    const targetPos = targetMarker.getLatLng();  // {lat: y, lng: x}
+    const tx = targetPos.lng;
+    const ty = targetPos.lat;
 
-    // 2. 简化碰撞检测：检查目标 Marker 是否在瞄准线的终点附近
-    // Leaflet 提供了距离计算方法
-    const distance = endLatLng.distanceTo(targetLatLng);
+    // 计算射线起点到目标点的向量
+    const toTargetX = tx - startX;
+    const toTargetY = ty - startY;
 
-    // 注意：distanceTo 返回的是米。由于您的 L.CRS.Simple 地图不是地理坐标，
-    // 这里的“米”实际上是您的地图单位。
-    if (distance < AIM_HIT_DISTANCE_THRESHOLD) {
-      return targetName; // 成功瞄准
+    // 投影长度（点在射线方向上的投影）
+    const proj = toTargetX * dirX + toTargetY * dirY;
+
+    // 如果投影为负，说明目标在射线背后，直接忽略
+    if (proj < 0) continue;
+
+    // 最近点坐标
+    const closestX = startX + proj * dirX;
+    const closestY = startY + proj * dirY;
+
+    // 最近点到目标的距离（垂直距离）
+    const distX = tx - closestX;
+    const distY = ty - closestY;
+    const distance = Math.sqrt(distX * distX + distY * distY);
+
+    // 玩家图标有效半径（根据你的图标大小调整，推荐 4~8）
+    const HIT_RADIUS = 6;
+
+    if (distance < HIT_RADIUS && proj < closestDist) {
+      closestDist = proj;
+      closestTarget = targetName;
     }
   }
 
-  return null; // 未瞄准任何玩家
+  return closestTarget;
 };
 
 const init = () => {
@@ -761,7 +780,7 @@ watch(
           playerMarkers.set(player.name, marker)
         }
 
-        // ========= 2. 视角线：只有开关开 + 有角度 才画 =========
+        // ========= 2. 视角线（未瞄准或同队：短实线；瞄准敌方：长红色虚线 + 箭头） =========
         if (
             playerSetting.value.info.angleViewLine &&
             player.position.angle != null
@@ -770,51 +789,108 @@ watch(
               ? -parseFloat(String(player.position.angle)) - 90
               : -parseFloat(String(player.position.angle));
 
-          const rayLength = otherSetting.value.rayLength;
+          const shortRayLength = otherSetting.value.rayLength;
           const position = getMapPos(player.position.x, player.position.y);
-          const rayX = position.x;
-          const rayY = position.y;  // ← 注意：你之前写成 ratY，拼写错了！
+          const startX = position.x;
+          const startY = position.y;
 
           const rad = offset * Math.PI / 180;
-          const endX = rayX + rayLength * Math.cos(rad);
-          const endY = rayY + rayLength * Math.sin(rad);
 
-          // *** 碰撞检测核心 ***
+          const shortEndX = startX + shortRayLength * Math.cos(rad);
+          const shortEndY = startY + shortRayLength * Math.sin(rad);
+
           const targetName = checkAimHit(player as Player);
-          const isAimingAtPlayer = targetName !== null;
 
-          // 根据是否瞄准来设置线条样式
-          const dashArray = isAimingAtPlayer ? '20, 10' : '8, 8'; // 长虚线
-          const opacity = isAimingAtPlayer ? 1.0 : otherSetting.value.rayOpacity; // 击中时更显眼
-          const oldLine = playerViewLines.get(player.name)
-          if (oldLine) {
-            oldLine.setLatLngs([[rayY, rayX], [endY, endX]])
-            oldLine.setStyle({
-              dashArray: dashArray,
-              opacity: opacity,
-            });
-          } else {
-            const line = L.polyline([[rayY, rayX], [endY, endX]], {
-              color: playerSetting.value.color.angleViewLine,
-              opacity: opacity,
-              weight: otherSetting.value.rayWidth,
-              dashArray: dashArray,
-              interactive: false
-            }).addTo(map)
-            playerViewLines.set(player.name, line)
+          let isAimingEnemy = false;
+          let targetLatLng: L.LatLng | null = null;
+
+          if (targetName) {
+            const targetPlayer = newPlayers.find(p => p.name === targetName);
+            if (targetPlayer && targetPlayer.teamId !== player.teamId) {
+              isAimingEnemy = true;
+              const marker = playerMarkers.get(targetName);
+              if (marker) targetLatLng = marker.getLatLng();
+            }
           }
+
+          const lineStart: [number, number] = [startY, startX];
+          const lineEnd: [number, number] = isAimingEnemy && targetLatLng
+              ? [targetLatLng.lat, targetLatLng.lng]
+              : [shortEndY, shortEndX];
+
+          // ========= 基础线（始终存在）=========
+          const baseLineOptions: L.PolylineOptions = {
+            color: isAimingEnemy ? '#FF0000' : playerSetting.value.color.angleViewLine,
+            weight: isAimingEnemy ? otherSetting.value.rayWidth + 2 : otherSetting.value.rayWidth,
+            opacity: isAimingEnemy ? 1.0 : otherSetting.value.rayOpacity,
+            interactive: false,
+            dashArray: isAimingEnemy ? '25, 15' : undefined,  // 敌方虚线，其他实线
+          };
+
+          let line = playerViewLines.get(player.name);
+          if (line) {
+            line.setLatLngs([lineStart, lineEnd]);
+            line.setStyle(baseLineOptions);
+          } else {
+            line = L.polyline([lineStart, lineEnd], baseLineOptions).addTo(map);
+            playerViewLines.set(player.name, line);
+          }
+
+          // ========= 箭头装饰（仅在瞄准敌方时显示）=========
+          let decorator = playerArrowDecorators.get(player.name);
+
+          if (isAimingEnemy) {
+            const arrowPattern = {
+              offset: '100%',         // 箭头放在线的末端
+              repeat: 0,
+              symbol: L.Symbol.arrowHead({
+                pixelSize: 20,                  // 箭头大小，可调整
+                pathOptions: {
+                  fillOpacity: 1,
+                  color: '#FF0000',
+                  weight: 0,
+                }
+              })
+            };
+
+            if (decorator) {
+              decorator.setPatterns([arrowPattern]);
+            } else {
+              decorator = L.polylineDecorator(line, {
+                patterns: [arrowPattern]
+              }).addTo(map);
+              playerArrowDecorators.set(player.name, decorator);
+            }
+          } else {
+            // 非瞄准敌方：移除箭头
+            if (decorator) {
+              map.removeLayer(decorator);
+              playerArrowDecorators.delete(player.name);
+            }
+          }
+
         } else {
-          // 开关关闭 或 无角度 → 只删除线，不影响玩家
-          const oldLine = playerViewLines.get(player.name)
-          if (oldLine) {
-            map.removeLayer(oldLine)
-            playerViewLines.delete(player.name)
+          // 无角度或关闭开关：删除线和箭头
+          const line = playerViewLines.get(player.name);
+          if (line) {
+            map.removeLayer(line);
+            playerViewLines.delete(player.name);
+          }
+          const decorator = playerArrowDecorators.get(player.name);
+          if (decorator) {
+            map.removeLayer(decorator);
+            playerArrowDecorators.delete(player.name);
           }
         }
       }
 
       // ========= 3. 清理下线玩家（marker + 线一起删）=========
       for (const name of playerMarkers.keys()) {
+        const decorator = playerArrowDecorators.get(name);
+        if (decorator) {
+          map.removeLayer(decorator);
+          playerArrowDecorators.delete(name);
+        }
         if (!currentNames.has(name)) {
           map.removeLayer(playerMarkers.get(name)!)
           playerMarkers.delete(name)

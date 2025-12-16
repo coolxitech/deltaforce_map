@@ -21,6 +21,7 @@
     "font-awesome": "^4.7.0",
     "jquery": "^3.7.1",
     "leaflet": "^1.9.4",
+    "leaflet-polylinedecorator": "^1.6.0",
     "leaflet-rotate": "^0.2.8",
     "leaflet.zoomslider": "^0.7.1",
     "pako": "^2.1.0",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@types/jquery": "^3.5.33",
     "@types/leaflet": "^1.9.21",
+    "@types/leaflet-polylinedecorator": "^1.6.5",
     "@types/pako": "^2.0.4",
     "@vitejs/plugin-vue": "^6.0.1",
     "terser": "^5.44.1",

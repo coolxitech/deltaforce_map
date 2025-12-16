@@ -170,7 +170,9 @@ onMounted( async () => {
   document.documentElement.style.height = '100%'
   document.body.style.height = '100%'
   const response = await axios.get('http://deltaforce.coolxi.eu.org/api/items');
-  itemsInfo = response.data.data;
+  const itemsUrl = response.data.data.url;
+  const dataResponse = await axios.get(itemsUrl);
+  itemsInfo = dataResponse.data;
 })
 
 let socket: WebSocket;
