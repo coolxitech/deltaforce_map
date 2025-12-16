@@ -1,22 +1,25 @@
 <script setup lang="ts">
 import {ref, onMounted, Ref} from 'vue'
-import {Settings} from '@/store/settings.js'
+import {SettingStore} from '@/store/settingStore.js'
 import {storeToRefs} from 'pinia'
 import {useRem} from '@/hooks/useRem'
-import {ElNotification} from 'element-plus'
+import {ElMessage, ElNotification} from 'element-plus'
 import {useDark} from '@vueuse/core'
 import Maps from '@/components/map.vue'
 import {Setting} from "@element-plus/icons-vue";
 import SettingPanel from "@/components/SettingPanel.vue";
 import { getUrlParam } from "@/utils/url.js";
 import VideoSplash from "@/components/VideoSplash.vue";
-import {Box, Item, Player, BoxHandler, ItemHandler, PlayerHandler} from "@/interface/GameData.js";
-import {convert} from "@/utils/convert.ts";
+import {Box, Item, Player, Map, BoxHandler, ItemHandler, PlayerHandler} from "@/interface/GameData.js";
+import {convert_un, convert_ray} from "@/utils/convert.ts";
 import CheatPlayerCard from "@/components/CheatPlayerCard.vue";
 import axios from "axios";
+import pako from "pako";
+import { encode as msg_encode, decode as msg_decode } from "@msgpack/msgpack";
+import type { RawData as RawData_ray } from "@/interface/ray/RawData.ts";
 
 useRem()
-const settings = Settings()
+const settings = SettingStore()
 const {
   loading,
 } = storeToRefs(settings)
@@ -26,6 +29,7 @@ let boxes:Ref<Box[]> = ref([]);
 let items:Ref<Item[]> = ref([]);
 let players: Ref<Player[]> = ref([]);
 let token: string;
+let cheatTeamId: number = 0;
 const cheatTeam: Ref<Player[]> = ref([]);
 const itemHandlerInstance = new ItemHandler();
 const boxHandlerInstance = new BoxHandler();
@@ -39,7 +43,7 @@ const itemHandler = (data: any) => {
     const incomingItems = data.items;
     const newKeys = new Set();
 
-    incomingItems.forEach(item => {
+    incomingItems.forEach((item: Item) => {
       const key = `${item.name}|${item.position.x},${item.position.y}|${item.grade}|${item.price}`;
       newKeys.add(key);
 
@@ -157,6 +161,7 @@ const playerHandler = (data: any) => {
 };
 
 const address = ref(getUrlParam('address'))
+const type = ref(getUrlParam('type') ?? 'un');
 useDark()
 const currentMap = ref('daba')
 const settingVisible = ref(false);
@@ -170,49 +175,114 @@ onMounted( async () => {
 
 let socket: WebSocket;
 if (address?.value) {
-  socket = new WebSocket('ws://' + address.value);
-  socket.onopen = async () => {
-    console.log("已连接挂狗地图,正在获取挂狗地图的鉴权...");
-    const response = await axios.get(`http://deltaforce.coolxi.eu.org/api/token?address=${address.value}`);
-    token = response.data.data.token;
-    socket.send(JSON.stringify({
-      token: token,
-    }));
-  };
+  if (type.value === 'un') {
+    socket = new WebSocket('ws://' + address.value);
+    socket.onopen = async () => {
+      console.log("已连接挂狗地图,正在获取挂狗地图的鉴权...");
+      // const response = await axios.get(`http://deltaforce.coolxi.eu.org/api/token?address=${address.value}`);
+      // token = response.data.data.token;
+      token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU3OTA5MzIsImV4cCI6Mjc2NTc5MDkzMSwidGltZXN0YW1wIjoxNzY1NzkwOTMyMDgyLCJpcCI6IjEyNy4wLjAuMSIsInBvcnQiOjgwODB9.D4Bdk2cIvKQYi4IXFNDHp5NRfciWQDi6G-uvfk-j5zk';
+      socket.send(JSON.stringify({
+        token: token,
+      }));
+    };
 
-  socket.onmessage = async (event) => {
-    try {
-      let data: any;
-      if (event.data instanceof Blob) {
-        const jsonStr = await event.data.text();
-        data = JSON.parse(jsonStr);
-      } else {
-        if (typeof event.data === 'string') {
-          data = JSON.parse(event.data);
+    socket.onmessage = async (event) => {
+      try {
+        let data: any;
+        if (event.data instanceof Blob) {
+          const jsonStr = await event.data.text();
+          data = JSON.parse(jsonStr);
         } else {
-          console.error('接收数据异常')
-          return;
+          if (typeof event.data === 'string') {
+            data = JSON.parse(event.data);
+          } else {
+            console.error('接收数据异常')
+            return;
+          }
         }
+
+        const gameData = convert_un(data, itemsInfo);
+        itemHandler(gameData);
+        boxHandler(gameData);
+        playerHandler(gameData);
+        currentMap.value = gameData.map.name;
+        loading.value = gameData.map.name === '';
+        // console.log(currentMap.value);
+      } catch (error) {
+        console.error("解析数据时出错:", error);
       }
-      if (data && data?.type === "auth") {
-        console.log('挂狗服务器鉴权成功');
+    };
+
+    socket.onclose = (event: CloseEvent) => {
+      console.log("服务器断开了连接:" + event.reason);
+    };
+  } else if (type.value === 'ray') {
+    socket = new WebSocket('ws://' + address.value + '/web');
+    socket.binaryType = "arraybuffer";
+    socket.onopen = async () => {
+      console.log("已连接挂狗地图,正在获取挂狗地图的原始数据...");
+    };
+    socket.onmessage = async (event) => {
+      let data: any;
+      let gameData: any;
+
+      data = event.data;
+      if (data.length == 1) {
+        loading.value = true;
         return;
       }
-      const gameData = convert(data, itemsInfo);
-      itemHandler(gameData);
-      boxHandler(gameData);
-      playerHandler(gameData);
-      currentMap.value = gameData.map.name;
-      if (gameData.map.name === '') {
-        loading.value = true;
-      } else {
-        loading.value = false;
+      if (data?.type === 'userType') {
+        if (data?.userType === 'normal') {
+          ElNotification({
+            title: '提示',
+            message: '挂狗开房完全权限,可看全部数据',
+            type: 'warning',
+          });
+        } else {
+          ElNotification({
+            title: '提示',
+            message: '挂狗开房部分权限,可看部分数据',
+            type: 'warning',
+          });
+        }
+        return;
       }
-      // console.log(currentMap.value);
-    } catch (error) {
-      console.error("解析数据时出错:", error);
-    }
-  };
+      if (data?.type === 'permissions') {
+        ElNotification({
+          title: '提示',
+          message: `
+              显示玩家:${data.permissions?.normal.enablePlayers ? '同意' : '拒绝'}
+              显示人机:${data.permissions?.normal.enableAI ? '同意' : '拒绝'}
+              显示物资:${data.permissions?.normal.enableItems ? '同意' : '拒绝'}
+            `,
+          type: 'warning',
+        });
+        return;
+      }
+      if (!(event.data instanceof ArrayBuffer)) return;
+
+      try {
+        const raw = new Uint8Array(data);
+        const inflated = pako.inflate(raw);
+        const decoded = msg_decode(inflated) as RawData_ray;
+
+        if (decoded.t !== undefined && decoded.t !== 0) { // 全量数据
+          cheatTeamId = decoded.t;
+        }
+        gameData = await convert_ray(decoded, itemsInfo, cheatTeamId);
+        itemHandler(gameData);
+        boxHandler(gameData);
+        playerHandler(gameData);
+        currentMap.value = gameData.map.name;
+        loading.value = false;
+      } catch (error) {
+        return;
+      }
+    };
+  }
+
+
 
   socket.onclose = () => {
     ElNotification({
