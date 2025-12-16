@@ -7,7 +7,7 @@
  * @param price 物资价值
  */
 export interface Item {
-    id: string;
+    id?: string;
     name: string;
     position: Position;
     grade: number,
@@ -87,19 +87,22 @@ export interface Map {
 }
 /**
  * 玩家信息
- * @param id 玩家id
- * @param name 玩家名称
- * @param isBot 是否人机
- * @param isBoss 是否BOSS
- * @param isCheater 是否在作弊者队伍
- * @param role 角色ID
- * @param roleName 角色名称
- * @param roleAlias 角色别名
- * @param weapon 武器名称
- * @param health 玩家生命值
- * @param armor 玩家护甲等级
- * @param teamId 队伍id
- * @param position 玩家位置
+ * @param {string|number} id 玩家id
+ * @param {string} name 玩家名称
+ * @param {boolean} isBot 是否人机
+ * @param {boolean} isBoss 是否BOSS
+ * @param {boolean} isCheater 是否在作弊者队伍
+ * @param {number} role 角色ID
+ * @param {string} roleName 角色名称
+ * @param {string} roleAlias 角色别名
+ * @param {string} weapon 武器名称
+ * @param {number} health 玩家生命值
+ * @param {number} helmet 玩家头盔等级
+ * @param {number} armor 玩家护甲等级
+ * @param {number} [helmetDurability] 玩家头盔耐久度
+ * @param {number} [armorDurability] 玩家护甲耐久度
+ * @param {number} teamId 队伍id
+ * @param {Position} position 玩家位置
  */
 export interface Player {
     id?: string | number;
@@ -112,8 +115,10 @@ export interface Player {
     roleAlias: string;
     weapon: string;
     health: number;
-    helmet: number;
-    armor: number;
+    helmet?: number;
+    armor?: number;
+    helmetDurability?: number;
+    armorDurability?: number;
     teamId: number;
     position: Position;
 }
@@ -200,7 +205,7 @@ export class PlayerHandler {
  * @param position 位置 b,c
  */
 export interface Box {
-    isBot: boolean,
+    isBot?: boolean,
     position: Position,
 }
 
