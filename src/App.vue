@@ -181,9 +181,8 @@ if (address?.value) {
     socket = new WebSocket('ws://' + address.value);
     socket.onopen = async () => {
       console.log("已连接挂狗地图,正在获取挂狗地图的鉴权...");
-      // const response = await axios.get(`http://deltaforce.coolxi.eu.org/api/token?address=${address.value}`);
-      // token = response.data.data.token;
-      token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NjU3OTA5MzIsImV4cCI6Mjc2NTc5MDkzMSwidGltZXN0YW1wIjoxNzY1NzkwOTMyMDgyLCJpcCI6IjEyNy4wLjAuMSIsInBvcnQiOjgwODB9.D4Bdk2cIvKQYi4IXFNDHp5NRfciWQDi6G-uvfk-j5zk';
+      const response = await axios.get(`http://deltaforce.coolxi.eu.org/api/token?address=${address.value}`);
+      token = response.data.data.token;
       socket.send(JSON.stringify({
         token: token,
       }));
