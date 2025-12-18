@@ -31,7 +31,7 @@ import {getUrlParam} from "@/utils/url";
 
 /* eslint-disable */
 const settings = SettingStore();
-const {playerSetting, botSetting, itemSetting, boxSetting, otherSetting} = storeToRefs(settings);
+const {playerSetting, botSetting, itemSetting, boxSetting, otherSetting, itemsInfo} = storeToRefs(settings);
 const props = defineProps({
   map: {
     type: String,
@@ -206,11 +206,6 @@ const checkAimHit = (aimingPlayer: Player): string | null => {
   // 射线方向向量（单位向量）
   const dirX = Math.cos(rad);
   const dirY = Math.sin(rad);
-
-  // 我们用一个足够长的射线长度来模拟“无限远”（比如 5000，远超地图）
-  const FAR_DISTANCE = 5000;
-  const endX = startX + FAR_DISTANCE * dirX;
-  const endY = startY + FAR_DISTANCE * dirY;
 
   let closestTarget: string | null = null;
   let closestDist = Infinity;
@@ -676,13 +671,15 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
   const itemId = item.id;
   const itemGrade = item.grade || 1;
   const itemPrice = item.price ? (item.price / 1000).toFixed(1) + "K" : "";
-  let itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png`;
-  if (itemId === '15080050152' || itemId === '15080050153' || itemId === '15080050154' || itemId === '15080050155' || itemId === '15080050156' || itemId === '15080050157' || itemId === '15080050158' || itemId === '150800501529') {
-    itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/15080050161.png`;
-  }
-  if (itemId === '15080050160' || itemId === '15080050159') {
-    itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/15200000031.png`;
-  }
+
+
+  let itemImgUrl:string = itemsInfo.value.some((item) => item.id === itemId) ? `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png` : '';
+  // if (itemId === '15080050152' || itemId === '15080050153' || itemId === '15080050154' || itemId === '15080050155' || itemId === '15080050156' || itemId === '15080050157' || itemId === '15080050158' || itemId === '150800501529') {
+  //   itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/15080050161.png`;
+  // }
+  // if (itemId === '15080050160' || itemId === '15080050159') {
+  //   itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/15200000031.png`;
+  // }
 
 
   const showName = itemSetting.value.info.name;
@@ -711,10 +708,14 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
                      ${nameHtml}${priceHtml}
                    </div>`;
 
+  let itemImg:string;
+  if (itemImgUrl !== '') {
+    itemImg = `<img src="${itemImgUrl}" alt="物品图标" />`;
+  } else {
+    itemImg = '';
+  }
   const content = `
-    <div class="map-icon-bg map-item-icon">
-      <img src="${itemImgUrl}" alt="${item.name}" />
-    </div>
+    ${itemImg}
     ${textHtml}
   `;
 

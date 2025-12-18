@@ -20,9 +20,7 @@ import type { RawData as RawData_ray } from "@/interface/ray/RawData.ts";
 
 useRem()
 const settings = SettingStore()
-const {
-  loading,
-} = storeToRefs(settings)
+const { loading, itemsInfo } = storeToRefs(settings)
 
 const loadingMessage = ref('挂狗还没进游戏，去找找其他房间吧...');
 let boxes:Ref<Box[]> = ref([]);
@@ -165,14 +163,14 @@ const type = ref(getUrlParam('type') ?? 'un');
 useDark()
 const currentMap = ref('daba')
 const settingVisible = ref(false);
-let itemsInfo = [];
+
 onMounted( async () => {
   document.documentElement.style.height = '100%'
   document.body.style.height = '100%'
   const response = await axios.get('http://deltaforce.coolxi.eu.org/api/items');
   const itemsUrl = response.data.data.url;
   const dataResponse = await axios.get(itemsUrl);
-  itemsInfo = dataResponse.data;
+  itemsInfo.value = dataResponse.data;
 })
 
 let socket: WebSocket;
@@ -203,7 +201,11 @@ if (address?.value) {
           }
         }
 
-        const gameData = convert_un(data, itemsInfo);
+        if (data?.type === 'auth' && data?.success) {
+          console.info('挂狗服务器鉴权成功');
+          return;
+        }
+        const gameData = convert_un(data, itemsInfo.value);
         itemHandler(gameData);
         boxHandler(gameData);
         playerHandler(gameData);
@@ -271,7 +273,7 @@ if (address?.value) {
         if (decoded.t !== undefined && decoded.t !== 0) { // 全量数据
           cheatTeamId = decoded.t;
         }
-        gameData = await convert_ray(decoded, itemsInfo, cheatTeamId);
+        gameData = await convert_ray(decoded, itemsInfo.value, cheatTeamId);
         itemHandler(gameData);
         boxHandler(gameData);
         playerHandler(gameData);
