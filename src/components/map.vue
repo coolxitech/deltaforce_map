@@ -229,7 +229,7 @@ const init = () => {
   return new Promise(() => {
     const mapWidth = isFloor ? mapScaleInfo.floorInfo.info.boundsW : mapScaleInfo.boundsW;
     const mapHeight = isFloor ? mapScaleInfo.floorInfo.info.boundsH : mapScaleInfo.boundsH;
-    const mapOrigin = isWar ? L.latLng(0, -80) : L.latLng(0, 0);
+    const mapOrigin = isWar ? new L.LatLng(0, -80) : new L.LatLng(0, 0);
     const pixelToLatLngRatio = -1;
     const southWest = mapOrigin; // 左上角
     const northEast = new L.LatLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio); // 右下角
@@ -283,8 +283,8 @@ const addLayer = (mapName: string) => {
 
   minZoom = mapScaleInfo.minZoom
   // console.log(minZoom, initZoom);
-  const bounds = L.latLngBounds(southWest, northEast);
-  currLayer = L.tileLayer(href + `${mapName}/{z}_{x}_{y}.jpg`, {
+  const bounds = new L.LatLngBounds(southWest, northEast);
+  currLayer = new L.TileLayer(href + `${mapName}/{z}_{x}_{y}.jpg`, {
     minZoom: minZoom,
     maxZoom: 8,
     maxNativeZoom: isFloor ? (mapScaleInfo.floorInfo.info?.maxZomm || 6) : 4,
@@ -309,7 +309,7 @@ const addLayer = (mapName: string) => {
 
     poiInfo?.forEach((item, index) => {
       if (item.name === '行政西楼' || item.name === '行政东楼') return;
-      const myIcon = L.divIcon({
+      const myIcon = new L.DivIcon({
         className: ` map-region-name`,
         html: `<div class="region-item" data-x="${item.x}" data-y="${item.y}">${item.name}</div>`,
       });
@@ -320,7 +320,7 @@ const addLayer = (mapName: string) => {
 
       // regionList.append(`<div class="region-item region-item-${index}" data-x="${item.x}" data-y="${item.y}">${item.name}</div>`)
 
-      poiList.push(L.marker([pos.y, pos.x], {icon: myIcon}).addTo(map))
+      poiList.push(new L.Marker([pos.y, pos.x], {icon: myIcon}).addTo(map))
     })
   }
   // 锚点定位
@@ -604,7 +604,7 @@ const createPlayerDivIcon = (player: Player,): L.DivIcon => {
   } else {
     content = headDiv + teamIdDiv + playerAvatarDiv + storyHeightDiv() + healthBarDiv() + nameDiv() + roleNameDiv() + healthDiv() + weaponDiv() + isCheatDiv() + footerDiv;
   }
-  return L.divIcon({
+  return new L.DivIcon({
     className: "map-icon",
     html: content,
     "iconSize": [1, 1],
@@ -637,7 +637,7 @@ const createBoxDivIcon = (box: Box): L.DivIcon => {
     }
   }
   // console.debug("createBoxDivIcon", box.isBot, box);
-  return L.divIcon({
+  return new L.DivIcon({
     className: "map-item-name",
     html: content,
     iconAnchor: [0, 0],
@@ -684,7 +684,7 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
     ${textHtml}
   `;
 
-  return L.divIcon({
+  return new L.DivIcon({
     className: "map-item-name",
     html: content,
     iconSize: [40, 40],
@@ -796,7 +796,7 @@ watch(
             line.setLatLngs([lineStart, lineEnd]);
             line.setStyle(baseLineOptions);
           } else {
-            line = L.polyline([lineStart, lineEnd], baseLineOptions).addTo(map);
+            line = new L.Polyline([lineStart, lineEnd], baseLineOptions).addTo(map);
             playerViewLines.set(player.name, line);
           }
 
@@ -899,7 +899,7 @@ watch(
           if (box.isBot && !boxSetting.value.bot) continue;
           if (!box.isBot && !boxSetting.value.player) continue;
 
-          const marker = L.marker(latlng, {
+          const marker = new L.Marker(latlng, {
             icon: createBoxDivIcon(box),
             zIndexOffset: box.isBot ? 600 : 610,
           }).addTo(map);
@@ -941,7 +941,7 @@ watch(
         currentKeys.add(key);
 
         const pos = getMapPos(item.position.x, item.position.y);
-        const latlng = L.latLng(pos.y, pos.x);
+        const latlng = new L.LatLng(pos.y, pos.x);
 
         const icon = createItemDivIcon(item);
         // 关键：如果 icon.html 是空的，直接跳过创建/更新
@@ -955,7 +955,7 @@ watch(
           oldMarker.setLatLng(latlng);
           oldMarker.setIcon(icon);
         } else {
-          const marker = L.marker(latlng, {
+          const marker = new L.Marker(latlng, {
             icon: icon,
             zIndexOffset: 500, // 一般比盒子低一点
           }).addTo(map);
