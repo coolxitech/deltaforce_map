@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import 'leaflet-polylinedecorator';
-import L, {DomUtil} from 'leaflet';
+import * as L from 'leaflet';
 import 'leaflet.zoomslider/src/L.Control.Zoomslider.js';
 import 'leaflet-rotate/dist/leaflet-rotate';
 //地图
@@ -10,7 +10,6 @@ import {SettingStore} from "@/store/settingStore.js";
 import {storeToRefs} from "pinia";
 import $ from "jquery";
 import {Box, Item, Player} from "@/interface/GameData.ts";
-import getPosition = DomUtil.getPosition;
 import {getUrlParam} from "@/utils/url";
 
 /* eslint-disable */
@@ -315,10 +314,6 @@ const addLayer = (mapName: string) => {
       });
       html += `<div class="region-item region-item-${index}" data-x="${item.x}" data-y="${item.y}">${item.name}</div>`
       const pos = getMapPos(Number(item.x), Number(item.y));
-      // // console.log(item.x, item.y);
-
-
-      // regionList.append(`<div class="region-item region-item-${index}" data-x="${item.x}" data-y="${item.y}">${item.name}</div>`)
 
       poiList.push(new L.Marker([pos.y, pos.x], {icon: myIcon}).addTo(map))
     })
