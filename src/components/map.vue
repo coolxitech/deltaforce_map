@@ -5,23 +5,7 @@ import 'leaflet.zoomslider/src/L.Control.Zoomslider.js';
 import 'leaflet-rotate/dist/leaflet-rotate';
 //地图
 import {nextTick, onMounted, ref, watch} from "vue";
-import {
-  dabaInfo,
-  selectRegion
-} from "@/lib/map_article.js";
-import {
-  bksInfo,
-  selectRegion_bks
-} from "@/lib/map_bks.js";
-import {cxjyInfo, selectRegion_cxjy} from "@/lib/map_cxjy.js";
-import {
-  htjdInfo,
-  selectRegion_htjd
-} from "@/lib/map_htjd.js";
-import {
-  cgxgInfo,
-  selectRegion_cgxg
-} from "@/lib/map_cgxg.js";
+
 import {SettingStore} from "@/store/settingStore.js";
 import {storeToRefs} from "pinia";
 import $ from "jquery";
@@ -128,7 +112,7 @@ function Page() {
 
 const bksTop = ['-461305', '-460454', '-459334', '-460257', '-459631', '-459328.9688', '-458885', '-459003', '-458692'];
 const bksBom = ['-458000', '-457863', '-457854', '-457554', '-457310', '-457776', '-457320', '-457322', '-457830'];
-let mapScaleInfo: any = dabaInfo;
+let mapScaleInfo: any = (window as any).dabaInfo;
 // 当前地图
 let currLayer: any;
 let isFloor: boolean;
@@ -176,7 +160,7 @@ const getMapPos = (posX: number, posY: number) => {
   }
 }
 new Page().init();
-let poiInfo = selectRegion;
+let poiInfo = (window as any).selectRegion;
 let poiList: any = [];
 
 // 全面战场模式
@@ -354,74 +338,74 @@ const addLayer = (mapName: string) => {
 const changeMapLv = (type: string) => {
   switch (type) {
     case "00":
-      mapScaleInfo = dabaInfo;
-      poiInfo = selectRegion;
+      mapScaleInfo = (window as any).dabaInfo;
+      poiInfo = (window as any).selectRegion;
       currLayer.name !== "map_db" && addLayer("map_db");
       break;
     case "01":
-      mapScaleInfo = dabaInfo;
-      poiInfo = selectRegion;
+      mapScaleInfo = (window as any).dabaInfo;
+      poiInfo = (window as any).selectRegion;
       currLayer.name !== "map_db" && addLayer("map_db");
       break;
     case "10":
-      mapScaleInfo = cgxgInfo;
-      poiInfo = selectRegion_cgxg;
+      mapScaleInfo = (window as any).cgxgInfo;
+      poiInfo = (window as any).selectRegion_cgxg;
       map.removeLayer(currLayer);
       currLayer.name !== "map_yc" && addLayer("map_yc");
       map.addLayer(currLayer);
       break;
     case "10_s":
-      mapScaleInfo = cgxgInfo;
-      poiInfo = selectRegion_cgxg;
+      mapScaleInfo = (window as any).cgxgInfo;
+      poiInfo = (window as any).selectRegion_cgxg;
       map.removeLayer(currLayer);
       currLayer.name !== "map_yc2" && addLayer("map_yc2");
       map.addLayer(currLayer);
       break;
     case "11":
-      mapScaleInfo = cgxgInfo;
-      poiInfo = selectRegion_cgxg;
+      mapScaleInfo = (window as any).cgxgInfo;
+      poiInfo = (window as any).selectRegion_cgxg;
       map.removeLayer(currLayer);
       currLayer.name !== "map_yc" && addLayer("map_yc");
       map.addLayer(currLayer);
       break;
     case "11_s":
-      mapScaleInfo = cgxgInfo;
-      poiInfo = selectRegion_cgxg;
+      mapScaleInfo = (window as any).cgxgInfo;
+      poiInfo = (window as any).selectRegion_cgxg;
       map.removeLayer(currLayer);
       currLayer.name !== "map_yc2" && addLayer("map_yc2");
       map.addLayer(currLayer);
       break;
     case "21":
-      mapScaleInfo = htjdInfo;
-      poiInfo = selectRegion_htjd;
+      mapScaleInfo = (window as any).htjdInfo;
+      poiInfo = (window as any).selectRegion_htjd;
       map.removeLayer(currLayer);
       currLayer.name !== "map_htjd" && addLayer("map_htjd");
       map.addLayer(currLayer);
       break;
     case "22":
-      mapScaleInfo = htjdInfo;
-      poiInfo = selectRegion_htjd;
+      mapScaleInfo = (window as any).htjdInfo;
+      poiInfo = (window as any).selectRegion_htjd;
       map.removeLayer(currLayer);
       currLayer.name !== "map_htjd" && addLayer("map_htjd");
       map.addLayer(currLayer);
       break;
     case "31":
-      mapScaleInfo = bksInfo;
-      poiInfo = selectRegion_bks;
+      mapScaleInfo = (window as any).bksInfo;
+      poiInfo = (window as any).selectRegion_bks;
       map.removeLayer(currLayer);
       currLayer.name !== "map_bks" && addLayer("map_bks2");
       map.addLayer(currLayer);
       break;
     case "32":
-      mapScaleInfo = bksInfo;
-      poiInfo = selectRegion_bks;
+      mapScaleInfo = (window as any).bksInfo;
+      poiInfo = (window as any).selectRegion_bks;
       map.removeLayer(currLayer);
       currLayer.name !== "map_bks" && addLayer("map_bks2");
       map.addLayer(currLayer);
       break;
     case "42":
-      mapScaleInfo = cxjyInfo;
-      poiInfo = selectRegion_cxjy;
+      mapScaleInfo = (window as any).cxjyInfo;
+      poiInfo = (window as any).selectRegion_cxjy;
       map.removeLayer(currLayer);
       currLayer.name !== "map_cxjy" && addLayer("map_cxjy");
       map.addLayer(currLayer);
