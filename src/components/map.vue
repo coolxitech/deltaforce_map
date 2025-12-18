@@ -648,17 +648,7 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
   const itemId = item.id;
   const itemGrade = item.grade || 1;
   const itemPrice = item.price ? (item.price / 1000).toFixed(1) + "K" : "";
-
-
-  let itemImgUrl:string = itemsInfo.value.some((item) => item.id === itemId) ? `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png` : '';
-  // if (itemId === '15080050152' || itemId === '15080050153' || itemId === '15080050154' || itemId === '15080050155' || itemId === '15080050156' || itemId === '15080050157' || itemId === '15080050158' || itemId === '150800501529') {
-  //   itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/15080050161.png`;
-  // }
-  // if (itemId === '15080050160' || itemId === '15080050159') {
-  //   itemImgUrl = `https://playerhub.df.qq.com/playerhub/60004/object/15200000031.png`;
-  // }
-
-
+  const itemImgUrl = itemsInfo.value.some((item) => item.id === itemId) ? `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png` : '';
   const showName = itemSetting.value.info.name;
   const showPrice = itemSetting.value.info.price;
 
@@ -685,7 +675,7 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
                      ${nameHtml}${priceHtml}
                    </div>`;
 
-  let itemImg:string;
+  let itemImg: string;
   if (itemImgUrl !== '') {
     itemImg = `<img src="${itemImgUrl}" alt="物品图标" />`;
   } else {
