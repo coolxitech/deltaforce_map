@@ -644,7 +644,6 @@ const createBoxDivIcon = (box: Box): L.DivIcon => {
   });
 };
 const createItemDivIcon = (item: Item): L.DivIcon | null => {
-  // 全局开关已经在 watch 里判断了，这里可以不再判断
   const itemId = item.id;
   const itemGrade = item.grade || 1;
   const itemPrice = item.price ? (item.price / 1000).toFixed(1) + "K" : "";
@@ -652,7 +651,6 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
   const showName = itemSetting.value.info.name;
   const showPrice = itemSetting.value.info.price;
 
-  // 如果什么都不显示，直接返回 null
   if (!showName && !showPrice) {
     return null;
   }
@@ -689,18 +687,16 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
   return L.divIcon({
     className: "map-item-name",
     html: content,
-    iconSize: [40, 40],       // 建议给个正常大小，或者 null 自动
+    iconSize: [40, 40],
     iconAnchor: [20, 20],
   });
 };
 const getBoxKey = (box: Box) => {
-  // 坐标取整到厘米级 + 是否人机，基本不可能撞
   const x = Math.round(box.position.x * 10);
   const y = Math.round(box.position.y * 10);
   return `${x}_${y}_${box.isBot ? 'bot' : 'player'}`;
 };
 const getItemKey = (item: Item) => {
-  // 坐标取整到厘米级 + 是否人机，基本不可能撞
   const x = Math.round(item.position.x * 10);
   const y = Math.round(item.position.y * 10);
   return `${x}_${y}_${item.name}_${item.id}`;
@@ -733,7 +729,7 @@ watch(
         currentNames.add(player.name)
 
         const {x, y} = getUrlParam('type') !== 'ray' ? getMapPos(player.position.x, player.position.y) : { x: player.position.x, y: player.position.y}
-        const latlng = L.latLng(y, x)
+        const latlng = new L.LatLng(y, x)
 
         // ========= 1. 玩家 Marker：永远更新，与视角线开关无关 =========
         const oldMarker = playerMarkers.get(player.name)
@@ -741,7 +737,7 @@ watch(
           oldMarker.setLatLng(latlng)
           oldMarker.setIcon(createPlayerDivIcon(player))
         } else {
-          const marker = L.marker(latlng, {
+          const marker = new L.Marker(latlng, {
             icon: createPlayerDivIcon(player),
             zIndexOffset: 1000
           }).addTo(map)
@@ -890,7 +886,7 @@ watch(
         currentKeys.add(key);
 
         const pos = getMapPos(box.position.x, box.position.y);
-        const latlng = L.latLng(pos.y, pos.x);
+        const latlng = new L.LatLng(pos.y, pos.x);
 
         const oldMarker = boxMarkers.get(key);
         if (oldMarker) {
