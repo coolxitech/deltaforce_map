@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {ref, onMounted, Ref} from 'vue'
-import {SettingStore} from '@/store/settingStore.js'
+import {SettingStore} from '@/store/settingStore'
 import {storeToRefs} from 'pinia'
 import {useRem} from '@/hooks/useRem'
 import {ElMessage, ElNotification} from 'element-plus'
@@ -164,14 +164,7 @@ useDark()
 const currentMap = ref('daba')
 const settingVisible = ref(false);
 
-onMounted( async () => {
-  document.documentElement.style.height = '100%'
-  document.body.style.height = '100%'
-  const response = await axios.get('http://deltaforce.coolxi.eu.org/api/items');
-  const itemsUrl = response.data.data.url;
-  const dataResponse = await axios.get(itemsUrl);
-  itemsInfo.value = dataResponse.data;
-})
+
 
 let socket: WebSocket;
 if (address?.value) {

@@ -6,7 +6,7 @@ import 'leaflet-rotate/dist/leaflet-rotate';
 //地图
 import {nextTick, onMounted, ref, watch} from "vue";
 
-import {SettingStore} from "@/store/settingStore.js";
+import {SettingStore} from "@/store/settingStore";
 import {storeToRefs} from "pinia";
 import $ from "jquery";
 import {Box, Item, Player} from "@/interface/GameData.ts";
@@ -640,10 +640,9 @@ const createBoxDivIcon = (box: Box): L.DivIcon => {
 };
 const createItemDivIcon = (item: Item): L.DivIcon | null => {
   const itemId = item.id;
-  const inItems = itemsInfo.value.some((item) => item.id === itemId);
-  itemsInfo.value.some((item) => item.id === itemId)
-  const itemGrade = (inItems ? itemsInfo.value.find((item) => item.id === itemId).grade : item.grade);
-  const itemPrice = (inItems ? (itemsInfo.value.find((item) => item.id === itemId).price / 1000).toFixed(1): (item.price / 1000).toFixed(1)) + 'K';
+  const inItems = itemsInfo.value.some((p_item) => p_item.objectID == itemId);
+  const itemGrade = (inItems ? itemsInfo.value.find((p_item) => p_item.objectID == itemId).grade : item.grade);
+  const itemPrice = (inItems ? (itemsInfo.value.find((p_item) => p_item.objectID == itemId).avgPrice / 1000).toFixed(1): (item.price / 1000).toFixed(1)) + 'K';
 
   const itemImgUrl = inItems ? `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png` : '';
   const showName = itemSetting.value.info.name;
@@ -672,8 +671,12 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
                    </div>`;
 
   let itemImg: string;
-  if (itemImgUrl !== '') {
-    itemImg = `<img src="${itemImgUrl}" alt="物品图标" />`;
+  if (itemImgUrl != '') {
+    itemImg = `
+        <div class="map-icon-bg map-item-icon">
+            <img src="${itemImgUrl}" alt="物品图标" />
+        </div>
+    `;
   } else {
     itemImg = '';
   }

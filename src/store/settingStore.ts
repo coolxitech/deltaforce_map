@@ -61,9 +61,12 @@ export const SettingStore = defineStore("settings", {
             rayWidth: 3,
             teammateSelectorSize: 100,
         },
-        itemsInfo: [],
+        itemsInfo: null,
     }),
     actions: {
+        setItemsInfo(itemsInfo: Array<any>) {
+            this.itemsInfo = itemsInfo
+        },
     },
     getters: {
     },

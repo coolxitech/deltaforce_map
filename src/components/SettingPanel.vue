@@ -2,10 +2,19 @@
 import {Close} from "@element-plus/icons-vue";
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { fas } from '@fortawesome/free-solid-svg-icons'
-library.add(fas);
+import {
+  faCog,
+  faUser,
+  faRobot,
+  faBox,
+  faCube,
+  faCogs,
+  faBars,
+  faTimes
+} from '@fortawesome/free-solid-svg-icons'
+library.add(faCog, faUser, faRobot, faBox, faCube, faCogs, faBars, faTimes);
 import {computed, ref, toRefs} from "vue";
-import {SettingStore} from "@/store/settingStore.js";
+import {SettingStore} from "@/store/settingStore";
 import {storeToRefs} from "pinia";
 
 const settings = SettingStore()
