@@ -6,7 +6,7 @@ import App from './App.vue'
 import ElementPlus from 'element-plus'
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
-import router from '@/router/index.js';
+import router from '@/router/index';
 import $ from 'jquery'
 
 window.jQuery = window.$ = $
