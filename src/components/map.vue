@@ -69,47 +69,40 @@ const browser = {
 };
 const regionList = $('.region-list');
 
-function Page() {
-  const _this = this;
-  _this.$page = $('.m-index')
+const Page = (() => {
+  const scaleAutoList = $('.scaleAuto');
 
-  // _this.$page.css('height', window.innerHeight)
-  _this.init = function () {
+  const resizeDom = () => {
+    if (window.innerHeight > window.innerWidth) return;
+    if (window.innerWidth / window.innerHeight - 1920 / 1080 > 0) {
+      // 宽屏情况
+    } else {
+      scaleAutoList.css('bottom', '0px');
+    }
+  };
+
+  const init = () => {
     if (!browser.versions.mobile) {
-      _this.resizeDom();
+      resizeDom();
       if (window.innerWidth / window.innerHeight > 1920 / 1080) {
-        $('.select_map_video').css({'width': '100%', 'height': 'auto'})
+        $('.select_map_video').css({ 'width': '100%', 'height': 'auto' });
       } else {
-        $('.select_map_video').css({'width': 'auto', 'height': '100%'})
+        $('.select_map_video').css({ 'width': 'auto', 'height': '100%' });
       }
     }
 
-    _this.isInit = true;
-  }
-  _this.sizeList = {'ar': true, 'en': true, 'zh-tw': true, 'ko': true, 'tr': true}
-  const scaleAutoList = $('.scaleAuto');
-  _this.resizeDom = () => {
-    if (window.innerHeight > window.innerWidth) return;
-    if (window.innerWidth / window.innerHeight - 1920 / 1080 > 0) {
-      // let scale = window.innerWidth / window.innerHeight - 1920 / 1080
-      // scaleAutoList.css('bottom', `${scale * 250}px`)
-      // topCtn[0].style.top = `${scale * 250}px`
-    } else {
-      scaleAutoList.css('bottom', '0px')
-    }
-
-
+    // 绑定 resize 事件
+    window.onresize = () => {
+      if (!browser.versions.mobile) {
+        resizeDom();
+      }
+    };
   };
 
-  window.onresize = () => {
-    if (!browser.versions.mobile) {
-      _this.resizeDom();
-    }
-  }
-
-
-}
-
+  return {
+    init // 直接返回 init 函数本身，而不是 init()
+  };
+})();
 const bksTop = ['-461305', '-460454', '-459334', '-460257', '-459631', '-459328.9688', '-458885', '-459003', '-458692'];
 const bksBom = ['-458000', '-457863', '-457854', '-457554', '-457310', '-457776', '-457320', '-457322', '-457830'];
 let mapScaleInfo: any = (window as any).dabaInfo;
@@ -159,7 +152,7 @@ const getMapPos = (posX: number, posY: number) => {
     return {x: bj - (mapScaleInfo.centerX - x) / xB2, y: -bj - (mapScaleInfo.centerY + y) / yB2}
   }
 }
-new Page().init();
+Page.init();
 let poiInfo = (window as any).selectRegion;
 let poiList: any = [];
 
