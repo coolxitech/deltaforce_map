@@ -640,9 +640,12 @@ const createBoxDivIcon = (box: Box): L.DivIcon => {
 };
 const createItemDivIcon = (item: Item): L.DivIcon | null => {
   const itemId = item.id;
-  const itemGrade = item.grade || 1;
-  const itemPrice = item.price ? (item.price / 1000).toFixed(1) + "K" : "";
-  const itemImgUrl = itemsInfo.value.some((item) => item.id === itemId) ? `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png` : '';
+  const inItems = itemsInfo.value.some((item) => item.id === itemId);
+  itemsInfo.value.some((item) => item.id === itemId)
+  const itemGrade = (inItems ? itemsInfo.value.find((item) => item.id === itemId).grade : item.grade);
+  const itemPrice = (inItems ? (itemsInfo.value.find((item) => item.id === itemId).price / 1000).toFixed(1): (item.price / 1000).toFixed(1)) + 'K';
+
+  const itemImgUrl = inItems ? `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png` : '';
   const showName = itemSetting.value.info.name;
   const showPrice = itemSetting.value.info.price;
 

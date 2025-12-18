@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "jsx": "preserve",
     "esModuleInterop": true,
     "allowJs": true,                    // 允许编译 JS 文件
@@ -11,6 +11,7 @@
     "noImplicitAny": false,             // 不报隐式 any
     "skipLibCheck": true,               // 跳过库文件检查
     "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
@@ -18,14 +19,14 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["vite/client"]
+    "types": ["vite/client", "node"]
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
-    "src/**/*.vue"
-    // 注意：不 include *.js，除非你想部分检查
+    "src/**/*.vue",
+    "vite.config.ts",
   ],
   "exclude": ["node_modules", "dist"]
 }
