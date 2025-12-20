@@ -3,51 +3,53 @@ import 'leaflet-polylinedecorator';
 import * as L from 'leaflet';
 import 'leaflet.zoomslider/src/L.Control.Zoomslider.js';
 import 'leaflet-rotate/dist/leaflet-rotate';
-//地图
-import {nextTick, onMounted, ref, watch} from "vue";
 
-import {SettingStore} from "@/store/settingStore";
-import {storeToRefs} from "pinia";
-import $ from "jquery";
-import {Box, Item, Player} from "@/interface/GameData.ts";
-import {getUrlParam} from "@/utils/url";
+import { nextTick, onMounted, ref, watch, onUnmounted } from "vue";
+import { SettingStore } from "@/store/settingStore";
+import { storeToRefs } from "pinia";
+import { Box, Item, Player } from "@/interface/GameData.ts";
+import { getUrlParam } from "@/utils/url";
 
 /* eslint-disable */
 const settings = SettingStore();
-const {playerSetting, botSetting, itemSetting, boxSetting, otherSetting, itemsInfo} = storeToRefs(settings);
+const { playerSetting, botSetting, itemSetting, boxSetting, otherSetting, itemsInfo } = storeToRefs(settings);
+
 const props = defineProps({
   map: {
     type: String,
     default: 'daba'
   },
   players: {
-    type: Array,
+    type: Array as () => Player[],
     default: () => [],
   },
   items: {
-    type: Array,
+    type: Array as () => Item[],
     default: () => [],
   },
   boxes: {
-    type: Array,
+    type: Array as () => Box[],
     default: () => [],
   }
 });
+
 const MAP_ALIAS = {
   daba: '00',
   cgxg: '10',
   htjd: '21',
   bks: '31',
   cxjy: '42'
-}
+};
+
+// 浏览器检测（保持原逻辑）
 const browser = {
   versions: (function () {
     const u = navigator.userAgent;
     return {
-      mobile: !!u.match(/AppleWebKit.*Mobile.*/), // 移动终端
-      Tablet: u.indexOf('Tablet') > -1 || u.indexOf('Pad') > -1 || u.indexOf('Nexus 7') > -1, // 平板
-      ios: u.indexOf('like Mac OS X') > -1, // ios终端
-      android: u.indexOf('Android') > -1 || u.indexOf('Adr') > -1, // android终端
+      mobile: !!u.match(/AppleWebKit.*Mobile.*/),
+      Tablet: u.indexOf('Tablet') > -1 || u.indexOf('Pad') > -1 || u.indexOf('Nexus 7') > -1,
+      ios: u.indexOf('like Mac OS X') > -1,
+      android: u.indexOf('Android') > -1 || u.indexOf('Adr') > -1,
       Safari: u.indexOf('Safari') > -1,
       Chrome: u.indexOf('Chrome') > -1 || u.indexOf('CriOS') > -1,
       IE: u.indexOf('MSIE') > -1 || u.indexOf('Trident') > -1,
@@ -66,110 +68,93 @@ const browser = {
   })(),
   language: navigator.language.toLowerCase()
 };
-const regionList = $('.region-list');
 
-const Page = (() => {
-  const scaleAutoList = $('.scaleAuto');
+// ---------- Vue 替代 jQuery 部分 ----------
+const mapContainer = ref<HTMLElement | null>(null);
+const scaleAutoRef = ref<HTMLElement | null>(null);        // 对应 .scaleAuto
+const selectMapVideoRef = ref<HTMLElement | null>(null);   // 对应 .select_map_video
+const regionList = ref<{ name: string; x: number; y: number; index: number }[]>([]); // POI 列表数据，用于模板渲染
 
-  const resizeDom = () => {
-    if (window.innerHeight > window.innerWidth) return;
-    if (window.innerWidth / window.innerHeight - 1920 / 1080 > 0) {
-      // 宽屏情况
-    } else {
-      scaleAutoList.css('bottom', '0px');
-    }
-  };
+// 窗口尺寸自适应（替代原来的 Page.init + resizeDom）
+const handleResize = () => {
+  if (browser.versions.mobile) return;
+  if (!selectMapVideoRef.value || !scaleAutoRef.value) return;
 
-  const init = () => {
-    if (!browser.versions.mobile) {
-      resizeDom();
-      if (window.innerWidth / window.innerHeight > 1920 / 1080) {
-        $('.select_map_video').css({ 'width': '100%', 'height': 'auto' });
-      } else {
-        $('.select_map_video').css({ 'width': 'auto', 'height': '100%' });
-      }
-    }
+  const ratio = window.innerWidth / window.innerHeight;
+  const designRatio = 1920 / 1080;
 
-    // 绑定 resize 事件
-    window.onresize = () => {
-      if (!browser.versions.mobile) {
-        resizeDom();
-      }
-    };
-  };
+  if (window.innerHeight > window.innerWidth) return;
 
-  return {
-    init // 直接返回 init 函数本身，而不是 init()
-  };
-})();
+  if (ratio > designRatio) {
+    // 宽屏
+    selectMapVideoRef.value.style.width = '100%';
+    selectMapVideoRef.value.style.height = 'auto';
+  } else {
+    // 高屏
+    selectMapVideoRef.value.style.width = 'auto';
+    selectMapVideoRef.value.style.height = '100%';
+    scaleAutoRef.value.style.bottom = '0px';
+  }
+};
+
+onMounted(() => {
+  handleResize();
+  window.addEventListener('resize', handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize);
+});
+// ---------- 结束替换 ----------
+
 const bksTop = ['-461305', '-460454', '-459334', '-460257', '-459631', '-459328.9688', '-458885', '-459003', '-458692'];
 const bksBom = ['-458000', '-457863', '-457854', '-457554', '-457310', '-457776', '-457320', '-457322', '-457830'];
-let mapScaleInfo: any = (window as any).dabaInfo;
-// 当前地图
-let currLayer: any;
-let isFloor: boolean;
-let playerArrowDecorators = new Map<string, L.PolylineDecorator>();
-const getMapPos = (posX: number, posY: number) => {
-  if (currLayer.name === 'bks_1f' || currLayer.name === 'map_bks2') {
-    // console.log(posX, posY);
 
+let mapScaleInfo: any = (window as any).dabaInfo;
+let currLayer: any;
+let isFloor: boolean = false;
+let playerArrowDecorators = new Map<string, L.PolylineDecorator>();
+
+const getMapPos = (posX: number, posY: number) => {
+  if (currLayer?.name === 'bks_1f' || currLayer?.name === 'map_bks2') {
     if (bksTop.includes(String(posY))) {
-      posX = Number(posX) + 700
-      posY = Number(posY) - 200
+      posX = Number(posX) + 700;
+      posY = Number(posY) - 200;
     }
     if (bksBom.includes(String(posY))) {
-      posX = Number(posX) + 900
-      posY = Number(posY) + 200
+      posX = Number(posX) + 900;
+      posY = Number(posY) + 200;
     }
     if (posY === -459085) {
-      posX = Number(posX) + 300
+      posX = Number(posX) + 300;
     }
-
   }
+
   const x = Number(posX);
   const y = Number(posY);
   const bj = isFloor ? mapScaleInfo.floorInfo.info.bj : 128;
-  // x轴转换计算公式：世界轴 / 设计稿宽度/2
-  // x轴倍率：81086.304688 / 4096 = 19.79646110546875
-  // var xB = 81086.304688 / 4096
-  // 81086.304688 / 128
   const xB2 = mapScaleInfo.width / bj;
-
-  // y轴计算公式：世界轴 / 设计稿宽度/2
-  // y轴倍率：80988.500000 / 4096 = 19.7725830078125
-  // var yB = 80988.500000 / 4096 / -bj
   const yB2 = mapScaleInfo.height / bj;
 
-  // 世界中心轴x： 358155.687500； y： 750191.750000
-  // return {x: bj - (mapScaleInfo.centerX - x ) / xB2, y: -bj - (mapScaleInfo.centerY + y ) / yB2}
-  // currLayer.name === 'map_gc'|| currLayer.name === 'map_pc'
-
-  if (currLayer.name.indexOf('cgxg') !== -1 || currLayer.name === 'map_yc2' || currLayer.name === 'map_yc' || mapScaleInfo.rotate) {
-
-    return {x: bj - (mapScaleInfo.centerY + y) / yB2, y: -bj + (mapScaleInfo.centerX - x) / xB2}
+  if (currLayer?.name?.indexOf('cgxg') !== -1 || currLayer?.name === 'map_yc2' || currLayer?.name === 'map_yc' || mapScaleInfo.rotate) {
+    return { x: bj - (mapScaleInfo.centerY + y) / yB2, y: -bj + (mapScaleInfo.centerX - x) / xB2 };
   } else {
-    return {x: bj - (mapScaleInfo.centerX - x) / xB2, y: -bj - (mapScaleInfo.centerY + y) / yB2}
+    return { x: bj - (mapScaleInfo.centerX - x) / xB2, y: -bj - (mapScaleInfo.centerY + y) / yB2 };
   }
-}
-Page.init();
-let poiInfo = (window as any).selectRegion;
-let poiList: any = [];
+};
 
-// 全面战场模式
+let poiInfo = (window as any).selectRegion;
+let poiList: L.Marker[] = [];
 let isWar: boolean = false;
 
-// 标点
 let map: L.Map;
-
 let playerMarkers = new Map<string, L.Marker>();
 let playerViewLines = new Map<string, L.Polyline>();
 let boxMarkers = new Map<string, L.Marker>();
 let itemMarkers = new Map<string, L.Marker>();
 
 /**
- * 检查当前玩家的瞄准射线是否击中任何其他玩家（基于射线到点的最近距离）
- * @param aimingPlayer - 正在瞄准的玩家
- * @returns 被瞄准玩家的名称，或 null
+ * 检查当前玩家的瞄准射线是否击中任何其他玩家
  */
 const checkAimHit = (aimingPlayer: Player): string | null => {
   if (aimingPlayer.position.angle == null) return null;
@@ -179,7 +164,6 @@ const checkAimHit = (aimingPlayer: Player): string | null => {
   const offset = currLayer.name === 'map_yc' ? -angle - 90 : -angle;
   const rad = offset * Math.PI / 180;
 
-  // 射线方向向量（单位向量）
   const dirX = Math.cos(rad);
   const dirY = Math.sin(rad);
 
@@ -189,30 +173,23 @@ const checkAimHit = (aimingPlayer: Player): string | null => {
   for (const [targetName, targetMarker] of playerMarkers.entries()) {
     if (targetName === aimingPlayer.name) continue;
 
-    const targetPos = targetMarker.getLatLng();  // {lat: y, lng: x}
+    const targetPos = targetMarker.getLatLng();
     const tx = targetPos.lng;
     const ty = targetPos.lat;
 
-    // 计算射线起点到目标点的向量
     const toTargetX = tx - startX;
     const toTargetY = ty - startY;
 
-    // 投影长度（点在射线方向上的投影）
     const proj = toTargetX * dirX + toTargetY * dirY;
-
-    // 如果投影为负，说明目标在射线背后，直接忽略
     if (proj < 0) continue;
 
-    // 最近点坐标
     const closestX = startX + proj * dirX;
     const closestY = startY + proj * dirY;
 
-    // 最近点到目标的距离（垂直距离）
     const distX = tx - closestX;
     const distY = ty - closestY;
     const distance = Math.sqrt(distX * distX + distY * distY);
 
-    // 玩家图标有效半径（根据你的图标大小调整，推荐 4~8）
     const HIT_RADIUS = 6;
 
     if (distance < HIT_RADIUS && proj < closestDist) {
@@ -224,433 +201,289 @@ const checkAimHit = (aimingPlayer: Player): string | null => {
   return closestTarget;
 };
 
-const init = () => {
-  return new Promise(() => {
-    const mapWidth = isFloor ? mapScaleInfo.floorInfo.info.boundsW : mapScaleInfo.boundsW;
-    const mapHeight = isFloor ? mapScaleInfo.floorInfo.info.boundsH : mapScaleInfo.boundsH;
-    const mapOrigin = isWar ? new L.LatLng(0, -80) : new L.LatLng(0, 0);
-    const pixelToLatLngRatio = -1;
-    const southWest = mapOrigin; // 左上角
-    const northEast = new L.LatLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio); // 右下角
-    const bounds = new L.LatLngBounds(southWest, northEast);
-    map = new L.Map('MapContainer', {
-      crs: L.CRS.Simple,
-      attributionControl: false,
-      zoomControl: false,
-      maxBounds: bounds,
-      maxBoundsViscosity: 1.0,
-      minZoom: mapScaleInfo.minZoom,
-      maxZoom: 8,
-      preferCanvas: true,
-      wheelDebounceTime: 10,
-      zoomAnimation: true,
-      fadeAnimation: true,
-      markerZoomAnimation: true,
-      zoomAnimationThreshold: 2,
-      transform3DLimit: 8388608,
-      zoomSnap: 0.25,
-      zoomDelta: 0.25,
-      trackResize: !0
-    }).setView([mapScaleInfo.initX, mapScaleInfo.initY], mapScaleInfo.initZoom);
-    let control: L.Control = new L.Control.Zoomslider()
-    map.addControl(control);
+const init = async () => {
+  const mapWidth = isFloor ? mapScaleInfo.floorInfo.info.boundsW : mapScaleInfo.boundsW;
+  const mapHeight = isFloor ? mapScaleInfo.floorInfo.info.boundsH : mapScaleInfo.boundsH;
+  const mapOrigin = isWar ? new L.LatLng(0, -80) : new L.LatLng(0, 0);
+  const pixelToLatLngRatio = -1;
+  const southWest = mapOrigin;
+  const northEast = new L.LatLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio);
+  const bounds = new L.LatLngBounds(southWest, northEast);
 
-    addLayer('map_db');
-  });
+  map = new L.Map('MapContainer', {
+    crs: L.CRS.Simple,
+    attributionControl: false,
+    zoomControl: false,
+    maxBounds: bounds,
+    maxBoundsViscosity: 1.0,
+    minZoom: mapScaleInfo.minZoom,
+    maxZoom: 8,
+    preferCanvas: true,
+    wheelDebounceTime: 10,
+    zoomAnimation: true,
+    fadeAnimation: true,
+    markerZoomAnimation: true,
+    zoomAnimationThreshold: 2,
+    transform3DLimit: 8388608,
+    zoomSnap: 0.25,
+    zoomDelta: 0.25,
+    trackResize: true
+  }).setView([mapScaleInfo.initX, mapScaleInfo.initY], mapScaleInfo.initZoom);
+
+  const control = new (L.Control as any).Zoomslider();
+  map.addControl(control);
+
+  addLayer('map_db');
 };
 
 const addLayer = (mapName: string) => {
-  let mapWidth: number;
-  let mapHeight: number;
-  let minZoom: number;
-  let pixelToLatLngRatio: number;
-  let southWest: any; // 左上角
-  mapWidth = mapScaleInfo.boundsW
-  mapHeight = mapScaleInfo.boundsH
-  southWest = new L.LatLng(0, 0)
-  pixelToLatLngRatio = -1
-  const northEast = new L.LatLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio); // 右下角
+  let mapWidth = mapScaleInfo.boundsW;
+  let mapHeight = mapScaleInfo.boundsH;
+  let minZoom = mapScaleInfo.minZoom;
+  let pixelToLatLngRatio = -1;
+  const southWest = new L.LatLng(0, 0);
+  const northEast = new L.LatLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio);
   let href: string;
+
   if (!isFloor && mapScaleInfo.href) {
-    href = mapScaleInfo.href
+    href = mapScaleInfo.href;
   } else if (isFloor && mapScaleInfo.floorInfo?.info?.href) {
-    href = mapScaleInfo.floorInfo?.info?.href
+    href = mapScaleInfo.floorInfo?.info?.href;
   } else {
-    href = '//game.gtimg.cn/images/dfm/cp/a20240729directory/img/'
+    href = '//game.gtimg.cn/images/dfm/cp/a20240729directory/img/';
   }
 
-
-  minZoom = mapScaleInfo.minZoom
-  // console.log(minZoom, initZoom);
   const bounds = new L.LatLngBounds(southWest, northEast);
-  currLayer = new L.TileLayer(href + `${mapName}/{z}_{x}_{y}.jpg`, {
-    minZoom: minZoom,
+
+  currLayer = new L.TileLayer(`${href}${mapName}/{z}_{x}_{y}.jpg`, {
+    minZoom,
     maxZoom: 8,
     maxNativeZoom: isFloor ? (mapScaleInfo.floorInfo.info?.maxZomm || 6) : 4,
     noWrap: false,
     attribution: '© OpenStreetMap contributors',
-    bounds: bounds,
-    errorTileUrl: href + `${mapName}/0_0_0.jpg`,
+    bounds,
+    errorTileUrl: `${href}${mapName}/0_0_0.jpg`,
     tileSize: isFloor ? 512 : 256,
     zoomOffset: isFloor ? -1 : 0
   }).addTo(map);
-  currLayer.name = mapName
-  map.setMaxBounds(bounds)
+
+  currLayer.name = mapName;
+  map.setMaxBounds(bounds);
   map.options.minZoom = minZoom;
 
-  $.each(poiList, function () {
-    this.remove();
-  });
+  // 清除旧 POI 标记
+  poiList.forEach(m => m.remove());
   poiList = [];
-  let html = ''
+  regionList.value = [];
+
   if (poiInfo && poiInfo.length > 0) {
-    // console.log('poiInfo', poiInfo);
-
-    poiInfo?.forEach((item, index) => {
+    poiInfo.forEach((item: any, index: number) => {
       if (item.name === '行政西楼' || item.name === '行政东楼') return;
-      const myIcon = new L.DivIcon({
-        className: ` map-region-name`,
-        html: `<div class="region-item" data-x="${item.x}" data-y="${item.y}">${item.name}</div>`,
-      });
-      html += `<div class="region-item region-item-${index}" data-x="${item.x}" data-y="${item.y}">${item.name}</div>`
+
       const pos = getMapPos(Number(item.x), Number(item.y));
+      const marker = new L.Marker([pos.y, pos.x], {
+        icon: new L.DivIcon({
+          className: 'map-region-name',
+          html: `<div class="region-item" data-x="${item.x}" data-y="${item.y}">${item.name}</div>`,
+        })
+      }).addTo(map);
 
-      poiList.push(new L.Marker([pos.y, pos.x], {icon: myIcon}).addTo(map))
-    })
+      poiList.push(marker);
+      regionList.value.push({ name: item.name, x: item.x, y: item.y, index });
+    });
   }
-  // 锚点定位
-  regionList.html(html)
-}
+};
 
-// 地图难度切换
 const changeMapLv = (type: string) => {
   switch (type) {
     case "00":
-      mapScaleInfo = (window as any).dabaInfo;
-      poiInfo = (window as any).selectRegion;
-      currLayer.name !== "map_db" && addLayer("map_db");
-      break;
     case "01":
       mapScaleInfo = (window as any).dabaInfo;
       poiInfo = (window as any).selectRegion;
-      currLayer.name !== "map_db" && addLayer("map_db");
+      if (currLayer?.name !== "map_db") addLayer("map_db");
       break;
     case "10":
-      mapScaleInfo = (window as any).cgxgInfo;
-      poiInfo = (window as any).selectRegion_cgxg;
-      map.removeLayer(currLayer);
-      currLayer.name !== "map_yc" && addLayer("map_yc");
-      map.addLayer(currLayer);
-      break;
-    case "10_s":
-      mapScaleInfo = (window as any).cgxgInfo;
-      poiInfo = (window as any).selectRegion_cgxg;
-      map.removeLayer(currLayer);
-      currLayer.name !== "map_yc2" && addLayer("map_yc2");
-      map.addLayer(currLayer);
-      break;
     case "11":
       mapScaleInfo = (window as any).cgxgInfo;
       poiInfo = (window as any).selectRegion_cgxg;
       map.removeLayer(currLayer);
-      currLayer.name !== "map_yc" && addLayer("map_yc");
+      if (currLayer?.name !== "map_yc") addLayer("map_yc");
       map.addLayer(currLayer);
       break;
+    case "10_s":
     case "11_s":
       mapScaleInfo = (window as any).cgxgInfo;
       poiInfo = (window as any).selectRegion_cgxg;
       map.removeLayer(currLayer);
-      currLayer.name !== "map_yc2" && addLayer("map_yc2");
+      if (currLayer?.name !== "map_yc2") addLayer("map_yc2");
       map.addLayer(currLayer);
       break;
     case "21":
-      mapScaleInfo = (window as any).htjdInfo;
-      poiInfo = (window as any).selectRegion_htjd;
-      map.removeLayer(currLayer);
-      currLayer.name !== "map_htjd" && addLayer("map_htjd");
-      map.addLayer(currLayer);
-      break;
     case "22":
       mapScaleInfo = (window as any).htjdInfo;
       poiInfo = (window as any).selectRegion_htjd;
       map.removeLayer(currLayer);
-      currLayer.name !== "map_htjd" && addLayer("map_htjd");
+      if (currLayer?.name !== "map_htjd") addLayer("map_htjd");
       map.addLayer(currLayer);
       break;
     case "31":
-      mapScaleInfo = (window as any).bksInfo;
-      poiInfo = (window as any).selectRegion_bks;
-      map.removeLayer(currLayer);
-      currLayer.name !== "map_bks" && addLayer("map_bks2");
-      map.addLayer(currLayer);
-      break;
     case "32":
       mapScaleInfo = (window as any).bksInfo;
       poiInfo = (window as any).selectRegion_bks;
       map.removeLayer(currLayer);
-      currLayer.name !== "map_bks" && addLayer("map_bks2");
+      if (currLayer?.name !== "map_bks2") addLayer("map_bks2");
       map.addLayer(currLayer);
       break;
     case "42":
       mapScaleInfo = (window as any).cxjyInfo;
       poiInfo = (window as any).selectRegion_cxjy;
       map.removeLayer(currLayer);
-      currLayer.name !== "map_cxjy" && addLayer("map_cxjy");
+      if (currLayer?.name !== "map_cxjy") addLayer("map_cxjy");
       map.addLayer(currLayer);
       break;
     default:
       break;
   }
-}
+};
 
-const mapContainer = ref(null);
-
-const createPlayerDivIcon = (player: Player,): L.DivIcon => {
+const createPlayerDivIcon = (player: Player): L.DivIcon => {
+  // 此函数内容保持原样（非常长，这里省略以节省篇幅，实际使用时请粘贴原完整实现）
+  // ...（原 createPlayerDivIcon 完整代码）
   let teamColor: string;
   let content: string = '';
-  const playerAvatarSize = otherSetting.value.playerAvatarSize
+  const playerAvatarSize = otherSetting.value.playerAvatarSize;
   const playerAvatarRadius = playerAvatarSize / 30;
   const playerAvatarBgHeight = Math.round(12 * playerAvatarRadius);
   const playerAvatarBgWidth = Math.round(4 * playerAvatarRadius);
   const playerHealthBarWidth = Math.round(playerAvatarSize * 1.2);
   const teamIdFontSize = Math.round(10 * playerAvatarRadius);
   const playerAvatarBorderWidth = Math.round(2 * playerAvatarRadius);
+
   const borderColor = (roleId: number) => {
     switch (roleId) {
-      case 0:
-      case 1:
-        return "#FFFFFF";
-      case 2:
-        return "#54FF9F";
-      case 3:
-        return "#5FEEFF";
-      case 4:
-        return "#B07EFF";
-      case 5:
-        return "#FFF900";
-      default:
-        return "#FF2802";
+      case 0: case 1: return "#FFFFFF";
+      case 2: return "#54FF9F";
+      case 3: return "#5FEEFF";
+      case 4: return "#B07EFF";
+      case 5: return "#FFF900";
+      default: return "#FF2802";
     }
   };
+
   if (player.isCheater) {
     teamColor = 'green';
   } else {
     switch (player.teamId) {
-      case 1:
-        teamColor = 'red';
-        break;
-      case 2:
-        teamColor = 'blue';
-        break;
-      case 3:
-        teamColor = 'green';
-        break;
-      case 4:
-        teamColor = 'yellow';
-        break;
-      case 5:
-        teamColor = 'purple';
-        break;
-      case 6:
-        teamColor = 'orange';
-        break;
-      case 7:
-        teamColor = 'cyan';
-        break;
-      case 8:
-        teamColor = 'pink';
-        break;
-      case 9:
-        teamColor = 'brown';
-        break;
-      case 10:
-        teamColor = 'gray';
-        break;
-      case 11:
-        teamColor = 'white';
-        break;
-      case 12:
-        teamColor = 'black';
-        break;
-      default:
-        teamColor = 'black';
-        break;
+      case 1: teamColor = 'red'; break;
+      case 2: teamColor = 'blue'; break;
+      case 3: teamColor = 'green'; break;
+      case 4: teamColor = 'yellow'; break;
+      case 5: teamColor = 'purple'; break;
+      case 6: teamColor = 'orange'; break;
+      case 7: teamColor = 'cyan'; break;
+      case 8: teamColor = 'pink'; break;
+      case 9: teamColor = 'brown'; break;
+      case 10: teamColor = 'gray'; break;
+      case 11: teamColor = 'white'; break;
+      case 12: teamColor = 'black'; break;
+      default: teamColor = 'black'; break;
     }
   }
-  const headDiv = `
-    <div style="transform: scale(${playerAvatarRadius}); transform-origin: center;">
-  `;
+
+  const headDiv = `<div style="transform: scale(${playerAvatarRadius}); transform-origin: center;">`;
   const teamIdDiv = `<div class='team-id' style="background-color: ${teamColor}; color: white; width: ${playerAvatarBgHeight}px; height: ${playerAvatarBgHeight}px; font-size: ${teamIdFontSize}px; line-height: ${playerAvatarBgHeight}px;">${player.teamId}</div>`;
 
-  const displayArmor = () => {
-    return playerSetting.value.info.armor ? `style="border-left: ${playerAvatarBorderWidth}px solid ${borderColor(player.helmet)}; border-right: ${playerAvatarBorderWidth}px solid ${borderColor(player.armor)};"` : `style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; border: ${playerAvatarBorderWidth}px solid ${teamColor};"`;
+  const displayArmor = () => playerSetting.value.info.armor
+      ? `style="border-left: ${playerAvatarBorderWidth}px solid ${borderColor(player.helmet)}; border-right: ${playerAvatarBorderWidth}px solid ${borderColor(player.armor)};"`
+      : `style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; border: ${playerAvatarBorderWidth}px solid ${teamColor};"`;
 
-  };
-  const avatar = (roleName) => {
-    return new URL(`../assets/images/${roleName}.png`, import.meta.url).href
-  };
-  const playerAvatarDiv = `
-    <div class="map-icon-bg2" ${displayArmor()}>
+  const avatar = (roleName: string) => new URL(`../assets/images/${roleName}.png`, import.meta.url).href;
+
+  const playerAvatarDiv = `<div class="map-icon-bg2" ${displayArmor()}>
         <img src="${avatar(player.roleName)}" style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; transform: scale(${1 / playerAvatarRadius});" alt="${player.roleAlias}"/>
-    </div>
-  `;
+    </div>`;
 
   const storyHeightDiv = () => {
-    let div: string = '';
-    if (playerSetting.value.info.storyHeight) {
-      let directionColor: string;
-      let direction: string;
-      if (player.position.z > 0) {
-        directionColor = 'green';
-        direction = '▲';
-      }
-      if (player.position.z < 0) {
-        directionColor = 'red';
-        direction = '▼';
-      }
-      if (player.position.z === 0) {
-        directionColor = 'gray';
-        direction = '0';
-      }
-      div = `<div class="height-indicator" style="color: ${directionColor};">${direction}</div>`;
-    }
-    return div;
+    if (!playerSetting.value.info.storyHeight) return '';
+    let directionColor = 'gray', direction = '0';
+    if (player.position.z > 0) { directionColor = 'green'; direction = '▲'; }
+    if (player.position.z < 0) { directionColor = 'red'; direction = '▼'; }
+    return `<div class="height-indicator" style="color: ${directionColor};">${direction}</div>`;
   };
 
-  const healthBarDiv = () => {
-    const healthBar = `
+  const healthBarDiv = () => playerSetting.value.info.health ? `
       <div class="health-bar" style="width: ${playerHealthBarWidth}px; height: ${playerAvatarBgWidth}px;">
          <div class="health-bar-inner" style="width: ${player.health}%; background-color: ${player.health > 80 ? 'green' : player.health > 40 ? 'yellow' : 'red'};"></div>
-      </div>
-    `;
-    return playerSetting.value.info.health ? healthBar : '';
-  };
+      </div>` : '';
 
   const nameDiv = () => {
-    const nameDivCode = `
-      <div class='detail-text' style="font-size: ${teamIdFontSize}px;">
-        名称:${player.isBot ? "AI" : player.name}
-      </div>
-    `;
-    if (player.isBot) {
-      if (botSetting.value.info.name) {
-        return nameDivCode;
-      } else {
-        return '';
-      }
-    }
-    if (playerSetting.value.info.name) {
-      return nameDivCode;
-    } else {
-      return '';
-    }
+    if (player.isBot) return botSetting.value.info.name ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">名称:AI</div>` : '';
+    return playerSetting.value.info.name ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">名称:${player.name}</div>` : '';
   };
 
-  const roleNameDiv = () => {
-    let div: string = '';
-    if (!player.isBot) {
-      div = `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">角色:${player.roleAlias}</div>`;
-    }
-    return div;
-  };
+  const roleNameDiv = () => player.isBot ? '' : `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">角色:${player.roleAlias}</div>`;
 
   const healthDiv = () => {
-    let div: string = '';
-    if (player.isBot) {
-      if (botSetting.value.info.health) {
-        div = `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health}</div>`;
-      }
-    } else {
-      if (playerSetting.value.info.health) {
-        div = `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health}</div>`;
-      }
-    }
-    return div;
+    if (player.isBot) return botSetting.value.info.health ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health}</div>` : '';
+    return playerSetting.value.info.health ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health}</div>` : '';
   };
 
-  const weaponDiv = () => {
-    let div: string = '';
-    if (playerSetting.value.info.weapon && !player.isBot) {
-      div = `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">武器:${player.weapon}</div>`;
-    } else {
-      div = '';
-    }
-    return div;
-  };
+  const weaponDiv = () => playerSetting.value.info.weapon && !player.isBot ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">武器:${player.weapon}</div>` : '';
 
-  const isCheatDiv = () => {
-    let div: string = '';
-    if (player.isCheater) {
-      div = `<div class='detail-text' style="font-weight: bold;color: red;font-size: 2vh">挂狗队</div>`;
-    } else {
-      div = '';
-    }
-    return div;
-  }
+  const isCheatDiv = () => player.isCheater ? `<div class='detail-text' style="font-weight: bold;color: red;font-size: 2vh">挂狗队</div>` : '';
 
-  const footerDiv = `
-    </div>
-  `;
+  const footerDiv = `</div>`;
 
   if (player.isBot) {
-    if (botSetting.value.info.display) {
-      content = headDiv + playerAvatarDiv + nameDiv() + footerDiv;
-    }
+    content = botSetting.value.info.display ? headDiv + playerAvatarDiv + nameDiv() + footerDiv : '';
   } else {
     content = headDiv + teamIdDiv + playerAvatarDiv + storyHeightDiv() + healthBarDiv() + nameDiv() + roleNameDiv() + healthDiv() + weaponDiv() + isCheatDiv() + footerDiv;
   }
+
   return new L.DivIcon({
     className: "map-icon",
     html: content,
-    "iconSize": [1, 1],
-    "iconAnchor": [0, 0],
+    iconSize: [1, 1],
+    iconAnchor: [0, 0],
   });
 };
+
 const createBoxDivIcon = (box: Box): L.DivIcon => {
-  let content: string = '';
-  const boxImage = new URL(`../assets/images/box.png`, import.meta.url).href
-  const playerBoxImage = new URL(`../assets/images/player_box.png`, import.meta.url).href
+  let content = '';
+  const boxImage = new URL(`../assets/images/box.png`, import.meta.url).href;
+  const playerBoxImage = new URL(`../assets/images/player_box.png`, import.meta.url).href;
+
   if (box.isBot) {
     if (boxSetting.value.bot) {
-      content = `
-        <div class="map-icon-bg" style="border-color: ${boxSetting.value.color.bot}">
+      content = `<div class="map-icon-bg" style="border-color: ${boxSetting.value.color.bot}">
             <img src="${boxImage}" alt="人机盒子" />
-        </div>
-    `;
-    } else {
-      content = '';
+        </div>`;
     }
   } else {
     if (boxSetting.value.player) {
-      content = `
-        <div class="map-icon-bg" style="border-color: ${boxSetting.value.color.player}">
+      content = `<div class="map-icon-bg" style="border-color: ${boxSetting.value.color.player}">
             <img src="${playerBoxImage}" alt="玩家盒子" />
-        </div>
-    `;
-    } else {
-      content = '';
+        </div>`;
     }
   }
-  // console.debug("createBoxDivIcon", box.isBot, box);
+
   return new L.DivIcon({
     className: "map-item-name",
     html: content,
     iconAnchor: [0, 0],
   });
 };
+
 const createItemDivIcon = (item: Item): L.DivIcon | null => {
   const itemId = item.id;
-  const inItems = itemsInfo.value.some((p_item) => p_item.objectID == itemId);
-  const itemGrade = (inItems ? itemsInfo.value.find((p_item) => p_item.objectID == itemId).grade : item.grade);
-  const itemPrice = (inItems ? (itemsInfo.value.find((p_item) => p_item.objectID == itemId).avgPrice / 1000).toFixed(1): (item.price / 1000).toFixed(1)) + 'K';
-
+  const inItems = itemsInfo.value.some(p => p.objectID == itemId);
+  const itemGrade = inItems ? itemsInfo.value.find(p => p.objectID == itemId)!.grade : item.grade;
+  const itemPrice = (inItems ? itemsInfo.value.find(p => p.objectID == itemId)!.avgPrice / 1000 : item.price / 1000).toFixed(1) + 'K';
   const itemImgUrl = inItems ? `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png` : '';
+
   const showName = itemSetting.value.info.name;
   const showPrice = itemSetting.value.info.price;
-
-  if (!showName && !showPrice) {
-    return null;
-  }
+  if (!showName && !showPrice) return null;
 
   const itemColor = (grade: number) => {
     switch (grade) {
@@ -666,332 +499,276 @@ const createItemDivIcon = (item: Item): L.DivIcon | null => {
 
   const nameHtml = showName ? item.name : '';
   const priceHtml = showPrice ? `(${itemPrice})` : '';
-  const textHtml = `<div class="itemName" style="font-size: 0.12rem; color: ${itemColor(itemGrade)}">
-                     ${nameHtml}${priceHtml}
-                   </div>`;
+  const textHtml = `<div class="itemName" style="font-size: 0.12rem; color: ${itemColor(itemGrade)}">${nameHtml}${priceHtml}</div>`;
 
-  let itemImg: string;
-  if (itemImgUrl != '') {
-    itemImg = `
-        <div class="map-icon-bg map-item-icon">
-            <img src="${itemImgUrl}" alt="物品图标" />
-        </div>
-    `;
-  } else {
-    itemImg = '';
-  }
-  const content = `
-    ${itemImg}
-    ${textHtml}
-  `;
+  const itemImg = itemImgUrl ? `<div class="map-icon-bg map-item-icon"><img src="${itemImgUrl}" alt="物品图标" /></div>` : '';
 
   return new L.DivIcon({
     className: "map-item-name",
-    html: content,
+    html: itemImg + textHtml,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
   });
 };
-const getBoxKey = (box: Box) => {
-  const x = Math.round(box.position.x * 10);
-  const y = Math.round(box.position.y * 10);
-  return `${x}_${y}_${box.isBot ? 'bot' : 'player'}`;
-};
-const getItemKey = (item: Item) => {
-  const x = Math.round(item.position.x * 10);
-  const y = Math.round(item.position.y * 10);
-  return `${x}_${y}_${item.name}_${item.id}`;
-};
 
-watch(
-    () => props.map,
-    (newMap) => {
-      const type = MAP_ALIAS[newMap] || newMap
-      if (type) {
-        changeMapLv(type)
-      }
-    },
-);
+const getBoxKey = (box: Box) => `${Math.round(box.position.x * 10)}_${Math.round(box.position.y * 10)}_${box.isBot ? 'bot' : 'player'}`;
+const getItemKey = (item: Item) => `${Math.round(item.position.x * 10)}_${Math.round(item.position.y * 10)}_${item.name}_${item.id}`;
 
-watch(
-    () => props.players as Player[],
-    async (newPlayers: Player[]) => {
-      if (!map) return
-      await nextTick()
+watch(() => props.map, (newMap) => {
+  const type = MAP_ALIAS[newMap as keyof typeof MAP_ALIAS] || newMap;
+  if (type) changeMapLv(type);
+});
 
-      const currentNames = new Set<string>()
+watch(() => props.players as Player[], async (newPlayers) => {
+  if (!map) return;
+  await nextTick();
 
-      for (const player of newPlayers) {
-        // 基础过滤：坐标和名字必须有（角度可有可无！）
-        if (!player.position?.x || !player.name) continue;
-        if (player.isBot && !botSetting.value.info.display) continue;
+  const currentNames = new Set<string>();
 
-        // 这一步必须提前！不管是否画线，都要记录这个玩家存在
-        currentNames.add(player.name)
+  for (const player of newPlayers) {
+    if (!player.position?.x || !player.name) continue;
+    if (player.isBot && !botSetting.value.info.display) continue;
 
-        const {x, y} = getUrlParam('type') !== 'ray' ? getMapPos(player.position.x, player.position.y) : { x: player.position.x, y: player.position.y}
-        const latlng = new L.LatLng(y, x)
+    currentNames.add(player.name);
 
-        // ========= 1. 玩家 Marker：永远更新，与视角线开关无关 =========
-        const oldMarker = playerMarkers.get(player.name)
-        if (oldMarker) {
-          oldMarker.setLatLng(latlng)
-          oldMarker.setIcon(createPlayerDivIcon(player))
-        } else {
-          const marker = new L.Marker(latlng, {
-            icon: createPlayerDivIcon(player),
-            zIndexOffset: 1000
-          }).addTo(map)
-          playerMarkers.set(player.name, marker)
-        }
+    const { x, y } = getUrlParam('type') !== 'ray'
+        ? getMapPos(player.position.x, player.position.y)
+        : { x: player.position.x, y: player.position.y };
+    const latlng = new L.LatLng(y, x);
 
-        // ========= 2. 视角线（未瞄准或同队：短实线；瞄准敌方：长红色虚线 + 箭头） =========
-        if (
-            playerSetting.value.info.angleViewLine &&
-            player.position.angle != null
-        ) {
-          const offset = currLayer.name === 'map_yc'
-              ? -parseFloat(String(player.position.angle)) - 90
-              : -parseFloat(String(player.position.angle));
+    // 玩家 Marker
+    let marker = playerMarkers.get(player.name);
+    if (marker) {
+      marker.setLatLng(latlng);
+      marker.setIcon(createPlayerDivIcon(player));
+    } else {
+      marker = new L.Marker(latlng, { icon: createPlayerDivIcon(player), zIndexOffset: 1000 }).addTo(map);
+      playerMarkers.set(player.name, marker);
+    }
 
-          const shortRayLength = otherSetting.value.rayLength;
-          const position = getMapPos(player.position.x, player.position.y);
-          const startX = position.x;
-          const startY = position.y;
+    // 视角线与箭头
+    if (playerSetting.value.info.angleViewLine && player.position.angle != null) {
+      const offset = currLayer.name === 'map_yc' ? -player.position.angle - 90 : -player.position.angle;
+      const rad = offset * Math.PI / 180;
+      const shortRayLength = otherSetting.value.rayLength;
+      const pos = getMapPos(player.position.x, player.position.y);
+      const shortEndX = pos.x + shortRayLength * Math.cos(rad);
+      const shortEndY = pos.y + shortRayLength * Math.sin(rad);
 
-          const rad = offset * Math.PI / 180;
+      const targetName = checkAimHit(player);
+      let isAimingEnemy = false;
+      let targetLatLng: L.LatLng | null = null;
 
-          const shortEndX = startX + shortRayLength * Math.cos(rad);
-          const shortEndY = startY + shortRayLength * Math.sin(rad);
-
-          const targetName = checkAimHit(player as Player);
-
-          let isAimingEnemy = false;
-          let targetLatLng: L.LatLng | null = null;
-
-          if (targetName) {
-            const targetPlayer = newPlayers.find(p => p.name === targetName);
-            if (targetPlayer && targetPlayer.teamId !== player.teamId) {
-              isAimingEnemy = true;
-              const marker = playerMarkers.get(targetName);
-              if (marker) targetLatLng = marker.getLatLng();
-            }
-          }
-
-          const lineStart: [number, number] = [startY, startX];
-          const lineEnd: [number, number] = isAimingEnemy && targetLatLng
-              ? [targetLatLng.lat, targetLatLng.lng]
-              : [shortEndY, shortEndX];
-
-          // ========= 基础线（始终存在）=========
-          const baseLineOptions: L.PolylineOptions = {
-            color: isAimingEnemy ? '#FF0000' : playerSetting.value.color.angleViewLine,
-            weight: isAimingEnemy ? otherSetting.value.rayWidth + 2 : otherSetting.value.rayWidth,
-            opacity: isAimingEnemy ? 1.0 : otherSetting.value.rayOpacity,
-            interactive: false,
-            dashArray: isAimingEnemy ? '25, 15' : undefined,  // 敌方虚线，其他实线
-          };
-
-          let line = playerViewLines.get(player.name);
-          if (line) {
-            line.setLatLngs([lineStart, lineEnd]);
-            line.setStyle(baseLineOptions);
-          } else {
-            line = new L.Polyline([lineStart, lineEnd], baseLineOptions).addTo(map);
-            playerViewLines.set(player.name, line);
-          }
-
-          // ========= 箭头装饰（仅在瞄准敌方时显示）=========
-          let decorator = playerArrowDecorators.get(player.name);
-
-          if (isAimingEnemy) {
-            const arrowPattern = {
-              offset: '100%',         // 箭头放在线的末端
-              repeat: 0,
-              symbol: L.Symbol.arrowHead({
-                pixelSize: 20,                  // 箭头大小，可调整
-                pathOptions: {
-                  fillOpacity: 1,
-                  color: '#FF0000',
-                  weight: 0,
-                }
-              })
-            };
-
-            if (decorator) {
-              decorator.setPatterns([arrowPattern]);
-            } else {
-              decorator = L.polylineDecorator(line, {
-                patterns: [arrowPattern]
-              }).addTo(map);
-              playerArrowDecorators.set(player.name, decorator);
-            }
-          } else {
-            // 非瞄准敌方：移除箭头
-            if (decorator) {
-              map.removeLayer(decorator);
-              playerArrowDecorators.delete(player.name);
-            }
-          }
-
-        } else {
-          // 无角度或关闭开关：删除线和箭头
-          const line = playerViewLines.get(player.name);
-          if (line) {
-            map.removeLayer(line);
-            playerViewLines.delete(player.name);
-          }
-          const decorator = playerArrowDecorators.get(player.name);
-          if (decorator) {
-            map.removeLayer(decorator);
-            playerArrowDecorators.delete(player.name);
-          }
+      if (targetName) {
+        const targetPlayer = newPlayers.find(p => p.name === targetName);
+        if (targetPlayer && targetPlayer.teamId !== player.teamId) {
+          isAimingEnemy = true;
+          const m = playerMarkers.get(targetName);
+          if (m) targetLatLng = m.getLatLng();
         }
       }
 
-      // ========= 3. 清理下线玩家（marker + 线一起删）=========
-      for (const name of playerMarkers.keys()) {
-        const decorator = playerArrowDecorators.get(name);
+      const lineStart: [number, number] = [pos.y, pos.x];
+      const lineEnd: [number, number] = isAimingEnemy && targetLatLng ? [targetLatLng.lat, targetLatLng.lng] : [shortEndY, shortEndX];
+
+      const baseLineOptions: L.PolylineOptions = {
+        color: isAimingEnemy ? '#FF0000' : playerSetting.value.color.angleViewLine,
+        weight: isAimingEnemy ? otherSetting.value.rayWidth + 2 : otherSetting.value.rayWidth,
+        opacity: isAimingEnemy ? 1.0 : otherSetting.value.rayOpacity,
+        interactive: false,
+        dashArray: isAimingEnemy ? '25, 15' : undefined,
+      };
+
+      let line = playerViewLines.get(player.name);
+      if (line) {
+        line.setLatLngs([lineStart, lineEnd]);
+        line.setStyle(baseLineOptions);
+      } else {
+        line = new L.Polyline([lineStart, lineEnd], baseLineOptions).addTo(map);
+        playerViewLines.set(player.name, line);
+      }
+
+      let decorator = playerArrowDecorators.get(player.name);
+      if (isAimingEnemy) {
+        const arrowPattern = {
+          offset: '100%',
+          repeat: 0,
+          symbol: L.Symbol.arrowHead({
+            pixelSize: 20,
+            pathOptions: { fillOpacity: 1, color: '#FF0000', weight: 0 }
+          })
+        };
         if (decorator) {
-          map.removeLayer(decorator);
-          playerArrowDecorators.delete(name);
-        }
-        if (!currentNames.has(name)) {
-          map.removeLayer(playerMarkers.get(name)!)
-          playerMarkers.delete(name)
-
-          const line = playerViewLines.get(name)
-          if (line) {
-            map.removeLayer(line)
-            playerViewLines.delete(name)
-          }
-        }
-      }
-    },
-    {immediate: true}
-    // deep: true 可以保留，也可以去掉（props.players 引用变了就会触发）
-)
-
-watch(
-    () => props.boxes as Box[],
-    async (newBoxes: Box[]) => {
-      if (!map) return;
-      await nextTick(); // 确保 DOM 和 map 就绪
-
-      const currentKeys = new Set<string>();
-
-      for (const box of newBoxes) {
-        if (!box.position?.x || box.position.y === undefined) continue;
-
-        const key = getBoxKey(box);
-        currentKeys.add(key);
-
-        const pos = getMapPos(box.position.x, box.position.y);
-        const latlng = new L.LatLng(pos.y, pos.x);
-
-        const oldMarker = boxMarkers.get(key);
-        if (oldMarker) {
-          // 更新位置（盒子极少移动，但保险）
-          oldMarker.setLatLng(latlng);
-          // 更新图标（开关或颜色变了也能实时刷新）
-          oldMarker.setIcon(createBoxDivIcon(box));
+          decorator.setPatterns([arrowPattern]);
         } else {
-          // 新盒子：只在需要显示时才创建
-          if (box.isBot && !boxSetting.value.bot) continue;
-          if (!box.isBot && !boxSetting.value.player) continue;
-
-          const marker = new L.Marker(latlng, {
-            icon: createBoxDivIcon(box),
-            zIndexOffset: box.isBot ? 600 : 610,
-          }).addTo(map);
-
-          boxMarkers.set(key, marker);
+          decorator = L.polylineDecorator(line, { patterns: [arrowPattern] }).addTo(map);
+          playerArrowDecorators.set(player.name, decorator);
         }
+      } else if (decorator) {
+        map.removeLayer(decorator);
+        playerArrowDecorators.delete(player.name);
       }
+    } else {
+      // 关闭视角线
+      const line = playerViewLines.get(player.name);
+      if (line) { map.removeLayer(line); playerViewLines.delete(player.name); }
+      const decorator = playerArrowDecorators.get(player.name);
+      if (decorator) { map.removeLayer(decorator); playerArrowDecorators.delete(player.name); }
+    }
+  }
 
-      for (const key of boxMarkers.keys()) {
-        if (!currentKeys.has(key)) {
-          const marker = boxMarkers.get(key)!;
-          map.removeLayer(marker);
-          boxMarkers.delete(key);
-        }
-      }
-    },
-    {immediate: true}
-);
+  // 清理下线玩家
+  for (const name of playerMarkers.keys()) {
+    if (!currentNames.has(name)) {
+      const marker = playerMarkers.get(name);
+      if (marker) map.removeLayer(marker);
+      playerMarkers.delete(name);
 
-watch(
-    () => props.items as Item[],
-    async (newItems: Item[]) => {
-      if (!map) return;
-      await nextTick();
+      const line = playerViewLines.get(name);
+      if (line) map.removeLayer(line);
+      playerViewLines.delete(name);
 
-      const currentKeys = new Set<string>();
+      const decorator = playerArrowDecorators.get(name);
+      if (decorator) map.removeLayer(decorator);
+      playerArrowDecorators.delete(name);
+    }
+  }
+}, { immediate: true });
 
-      for (const item of newItems) {
-        if (!item.position?.x || item.position.y === undefined) continue;
+watch(() => props.boxes as Box[], async (newBoxes) => {
+  if (!map) return;
+  await nextTick();
 
-        // ===== 关键：先判断是否需要显示 =====
-        if (!itemSetting.value.info.display) continue;
+  const currentKeys = new Set<string>();
 
-        // 价格过滤（注意：price 可能为 0 或 undefined）
-        const price = item.price || 0;
-        if (price < (itemSetting.value.info.filter || 0)) continue;
+  for (const box of newBoxes) {
+    if (!box.position?.x || box.position.y === undefined) continue;
 
-        const key = getItemKey(item);
-        currentKeys.add(key);
+    const key = getBoxKey(box);
+    currentKeys.add(key);
 
-        const pos = getMapPos(item.position.x, item.position.y);
-        const latlng = new L.LatLng(pos.y, pos.x);
+    const pos = getMapPos(box.position.x, box.position.y);
+    const latlng = new L.LatLng(pos.y, pos.x);
 
-        const icon = createItemDivIcon(item);
-        // 关键：如果 icon.html 是空的，直接跳过创建/更新
-        if (!icon.options.html || typeof icon.options.html !== "string" || icon.options.html?.trim() === '') {
-          // 即使价格够了，但用户可能关掉了“显示名称”等，导致 html 为空
-          continue;
-        }
+    let marker = boxMarkers.get(key);
+    if (marker) {
+      marker.setLatLng(latlng);
+      marker.setIcon(createBoxDivIcon(box));
+    } else {
+      if ((box.isBot && !boxSetting.value.bot) || (!box.isBot && !boxSetting.value.player)) continue;
+      marker = new L.Marker(latlng, {
+        icon: createBoxDivIcon(box),
+        zIndexOffset: box.isBot ? 600 : 610,
+      }).addTo(map);
+      boxMarkers.set(key, marker);
+    }
+  }
 
-        const oldMarker = itemMarkers.get(key);
-        if (oldMarker) {
-          oldMarker.setLatLng(latlng);
-          oldMarker.setIcon(icon);
-        } else {
-          const marker = new L.Marker(latlng, {
-            icon: icon,
-            zIndexOffset: 500, // 一般比盒子低一点
-          }).addTo(map);
-          itemMarkers.set(key, marker);
-        }
-      }
+  for (const key of boxMarkers.keys()) {
+    if (!currentKeys.has(key)) {
+      const marker = boxMarkers.get(key);
+      if (marker) map.removeLayer(marker);
+      boxMarkers.delete(key);
+    }
+  }
+}, { immediate: true });
 
-      // 清理消失的物品
-      for (const key of itemMarkers.keys()) {
-        if (!currentKeys.has(key)) {
-          const marker = itemMarkers.get(key)!;
-          map.removeLayer(marker);
-          itemMarkers.delete(key);
-        }
-      }
-    },
-    { immediate: true }
-);
+watch(() => props.items as Item[], async (newItems) => {
+  if (!map) return;
+  await nextTick();
+
+  const currentKeys = new Set<string>();
+
+  for (const item of newItems) {
+    if (!item.position?.x || item.position.y === undefined) continue;
+    if (!itemSetting.value.info.display) continue;
+
+    const price = item.price || 0;
+    if (price < (itemSetting.value.info.filter || 0)) continue;
+
+    const key = getItemKey(item);
+    currentKeys.add(key);
+
+    const pos = getMapPos(item.position.x, item.position.y);
+    const latlng = new L.LatLng(pos.y, pos.x);
+
+    const icon = createItemDivIcon(item);
+    if (!icon || !icon.options.html || typeof icon.options.html !== "string" || icon.options.html?.trim() === '') continue;
+
+    let marker = itemMarkers.get(key);
+    if (marker) {
+      marker.setLatLng(latlng);
+      marker.setIcon(icon);
+    } else {
+      marker = new L.Marker(latlng, { icon, zIndexOffset: 500 }).addTo(map);
+      itemMarkers.set(key, marker);
+    }
+  }
+
+  for (const key of itemMarkers.keys()) {
+    if (!currentKeys.has(key)) {
+      const marker = itemMarkers.get(key);
+      if (marker) map.removeLayer(marker);
+      itemMarkers.delete(key);
+    }
+  }
+}, { immediate: true });
 
 onMounted(async () => {
   await nextTick();
   if (!mapContainer.value) {
-    console.error('Map container not found!')
-    return
+    console.error('Map container not found!');
+    return;
   }
   await init();
   if (props.map) {
-    changeMapLv(MAP_ALIAS[props.map]);
+    changeMapLv(MAP_ALIAS[props.map as keyof typeof MAP_ALIAS]);
   }
 });
 </script>
 
 <template>
-  <div ref="mapContainer" id="MapContainer" class="map"></div>
+  <div class="map-wrapper">
+    <div ref="mapContainer" id="MapContainer" class="map"></div>
+
+    <!-- 对应原来的 .scaleAuto -->
+    <div ref="scaleAutoRef" class="scaleAuto"></div>
+
+    <!-- 对应原来的 .select_map_video（如果项目中有此元素） -->
+    <div ref="selectMapVideoRef" class="select_map_video"></div>
+
+    <!-- POI 区域列表（替代原来的 region-list jQuery 操作） -->
+    <div class="region-list">
+      <div
+          v-for="item in regionList"
+          :key="item.index"
+          class="region-item"
+          :data-x="item.x"
+          :data-y="item.y"
+      >
+        {{ item.name }}
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+}
+
+/* 根据项目实际情况保留或调整以下样式 */
+.scaleAuto,
+.select_map_video,
+.region-list {
+  position: absolute;
+  /* 其他原有样式请自行补充 */
+}
 </style>

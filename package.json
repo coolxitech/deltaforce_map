@@ -18,7 +18,6 @@
     "axios": "^1.13.2",
     "element-plus": "^2.11.7",
     "font-awesome": "^4.7.0",
-    "jquery": "^3.7.1",
     "leaflet": "^1.9.4",
     "leaflet-polylinedecorator": "^1.6.0",
     "leaflet-rotate": "^0.2.8",
