@@ -59,7 +59,6 @@ export default defineConfig({
                     }
 
                     // 5. 较大的工具库独立拆分
-                    if (id.includes('node_modules/jquery')) return 'vendor-jquery';
                     if (id.includes('node_modules/pako') || id.includes('node_modules/@msgpack')) return 'vendor-compress';
                     if (id.includes('node_modules/axios')) return 'vendor-axios';
                     if (id.includes('node_modules/@vueuse')) return 'vendor-vueuse';
