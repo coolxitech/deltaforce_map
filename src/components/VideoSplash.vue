@@ -19,7 +19,7 @@
 import { ref, onMounted } from 'vue'
 
 // 正确引用 src/assets/video/intro.mp4
-const videoUrl = new URL('@/assets/video/intro.mp4', import.meta.url).href
+const videoUrl = new URL('@/assets/video/intro.webm', import.meta.url).href
 
 const props = defineProps({
   // 可选：外部传入
@@ -37,6 +37,7 @@ const videoEl = ref(null)
 const onVideoEnd = () => fadeOutAndDone()
 const skip = () => {
   videoEl.value?.pause()
+  videoEl.mute = false;
   fadeOutAndDone()
 }
 
@@ -46,12 +47,12 @@ const fadeOutAndDone = () => {
   setTimeout(() => {
     show.value = false
     emit('done')
-  }, 600)
+  }, 500)
 }
 
 onMounted(() => {
   const video = videoEl.value
-  const fallback = setTimeout(fadeOutAndDone, 3000)
+  const fallback = setTimeout(fadeOutAndDone, 1000)
   const clear = () => clearTimeout(fallback)
 
   video.addEventListener('loadeddata', clear)
