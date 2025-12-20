@@ -2,15 +2,15 @@
 import {ref, onMounted, Ref} from 'vue'
 import {SettingStore} from '@/store/settingStore'
 import {storeToRefs} from 'pinia'
-import {useRem} from '@/hooks/useRem'
-import {ElMessage, ElNotification} from 'element-plus'
+import {useRem} from '@/hooks/useRem.ts';
+import {ElNotification} from 'element-plus'
 import {useDark} from '@vueuse/core'
 import Maps from '@/components/map.vue'
 import {Setting} from "@element-plus/icons-vue";
 import SettingPanel from "@/components/SettingPanel.vue";
-import { getUrlParam } from "@/utils/url.js";
+import { getUrlParam } from "@/utils/url.ts";
 import VideoSplash from "@/components/VideoSplash.vue";
-import {Box, Item, Player, Map, BoxHandler, ItemHandler, PlayerHandler} from "@/interface/GameData.js";
+import {Box, Item, Player, BoxHandler, ItemHandler, PlayerHandler} from "@/interface/GameData.ts";
 import {convert_un, convert_ray} from "@/utils/convert.ts";
 import CheatPlayerCard from "@/components/CheatPlayerCard.vue";
 import axios from "axios";
@@ -68,14 +68,14 @@ const itemHandler = (data: any) => {
     const currentItems = itemHandlerInstance.list();
     const toRemove = [];
 
-    currentItems.forEach(item => {
+    currentItems.forEach((item: Item) => {
       const key = `${item.name}|${item.position.x},${item.position.y}|${item.grade}|${item.price}`;
       if (!newKeys.has(key)) {
         toRemove.push(item);
       }
     });
 
-    toRemove.forEach(item => {
+    toRemove.forEach((item: Item) => {
       itemHandlerInstance.remove({
         name: item.name,
         position: item.position,
@@ -97,7 +97,7 @@ const boxHandler = (data: any) => {
     const incomingBoxes = data.boxes;
     const newKeys = new Set();
 
-    incomingBoxes.forEach(box => {
+    incomingBoxes.forEach((box: Box) => {
       const key = `${box.isBot ? 1 : 0}|${box.position.x},${box.position.y}`;
       newKeys.add(key);
 
@@ -136,7 +136,7 @@ const playerHandler = (data: any) => {
     const newNames = new Set();
 
     // 1. 处理新数据
-    incomingPlayers.forEach(player => {
+    incomingPlayers.forEach((player: Player) => {
       newNames.add(player.name);
       playerHandlerInstance.add(player);
     });

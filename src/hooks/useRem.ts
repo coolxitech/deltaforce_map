@@ -1,6 +1,5 @@
-// src/hooks/useRem.js
 import { onMounted, onUnmounted } from 'vue';
-export function useRem() {
+export function useRem(): void {
     const setRem = () => {
         const docEl = document.documentElement
         const width = docEl.clientWidth

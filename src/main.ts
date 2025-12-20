@@ -7,9 +7,7 @@ import ElementPlus from 'element-plus'
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import router from '@/router/index';
-import $ from 'jquery'
 
-window.jQuery = window.$ = $
 const app = createApp(App);
 const pinia = createPinia();
 

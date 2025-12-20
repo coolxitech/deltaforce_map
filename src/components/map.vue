@@ -8,7 +8,7 @@ import { nextTick, onMounted, ref, watch, onUnmounted } from "vue";
 import { SettingStore } from "@/store/settingStore";
 import { storeToRefs } from "pinia";
 import { Box, Item, Player } from "@/interface/GameData.ts";
-import { getUrlParam } from "@/utils/url";
+import { getUrlParam } from "@/utils/url.ts";
 
 /* eslint-disable */
 const settings = SettingStore();
