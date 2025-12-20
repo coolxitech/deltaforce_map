@@ -12,7 +12,7 @@ const { itemsInfo } = storeToRefs(store);
 onMounted( async () => {
   document.documentElement.style.height = '100%'
   document.body.style.height = '100%'
-  if (itemsInfo.value.length === 0) {
+  if (itemsInfo.value === null) {
     try {
       const response = await axios.get('http://deltaforce.coolxi.eu.org/api/items');
       const dataResponse = await axios.get(response.data.data.url);
