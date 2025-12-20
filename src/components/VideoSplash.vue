@@ -4,7 +4,6 @@
         ref="videoEl"
         class="splash-video"
         autoplay
-        muted
         playsinline
         :src="videoSrc"
         @ended="onVideoEnd"
