@@ -10,7 +10,6 @@ import { storeToRefs } from "pinia";
 import { Box, Item, Player } from "@/interface/GameData.ts";
 import { getUrlParam } from "@/utils/url.ts";
 
-/* eslint-disable */
 const settings = SettingStore();
 const { playerSetting, botSetting, itemSetting, boxSetting, otherSetting, itemsInfo } = storeToRefs(settings);
 
@@ -69,13 +68,11 @@ const browser = {
   language: navigator.language.toLowerCase()
 };
 
-// ---------- Vue 替代 jQuery 部分 ----------
 const mapContainer = ref<HTMLElement | null>(null);
-const scaleAutoRef = ref<HTMLElement | null>(null);        // 对应 .scaleAuto
-const selectMapVideoRef = ref<HTMLElement | null>(null);   // 对应 .select_map_video
-const regionList = ref<{ name: string; x: number; y: number; index: number }[]>([]); // POI 列表数据，用于模板渲染
+const scaleAutoRef = ref<HTMLElement | null>(null);
+const selectMapVideoRef = ref<HTMLElement | null>(null);
+const regionList = ref<{ name: string; x: number; y: number; index: number }[]>([]);
 
-// 窗口尺寸自适应（替代原来的 Page.init + resizeDom）
 const handleResize = () => {
   if (browser.versions.mobile) return;
   if (!selectMapVideoRef.value || !scaleAutoRef.value) return;
@@ -105,14 +102,12 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize);
 });
-// ---------- 结束替换 ----------
 
 const bksTop = ['-461305', '-460454', '-459334', '-460257', '-459631', '-459328.9688', '-458885', '-459003', '-458692'];
 const bksBom = ['-458000', '-457863', '-457854', '-457554', '-457310', '-457776', '-457320', '-457322', '-457830'];
 
 let mapScaleInfo: any = (window as any).dabaInfo;
 let currLayer: any;
-let isFloor: boolean = false;
 let playerArrowDecorators = new Map<string, L.PolylineDecorator>();
 
 const getMapPos = (posX: number, posY: number) => {
@@ -132,7 +127,7 @@ const getMapPos = (posX: number, posY: number) => {
 
   const x = Number(posX);
   const y = Number(posY);
-  const bj = isFloor ? mapScaleInfo.floorInfo.info.bj : 128;
+  const bj = 128;
   const xB2 = mapScaleInfo.width / bj;
   const yB2 = mapScaleInfo.height / bj;
 
@@ -145,7 +140,6 @@ const getMapPos = (posX: number, posY: number) => {
 
 let poiInfo = (window as any).selectRegion;
 let poiList: L.Marker[] = [];
-let isWar: boolean = false;
 
 let map: L.Map;
 let playerMarkers = new Map<string, L.Marker>();
@@ -202,9 +196,9 @@ const checkAimHit = (aimingPlayer: Player): string | null => {
 };
 
 const init = async () => {
-  const mapWidth = isFloor ? mapScaleInfo.floorInfo.info.boundsW : mapScaleInfo.boundsW;
-  const mapHeight = isFloor ? mapScaleInfo.floorInfo.info.boundsH : mapScaleInfo.boundsH;
-  const mapOrigin = isWar ? new L.LatLng(0, -80) : new L.LatLng(0, 0);
+  const mapWidth = mapScaleInfo.boundsW;
+  const mapHeight = mapScaleInfo.boundsH;
+  const mapOrigin = new L.LatLng(0, 0);
   const pixelToLatLngRatio = -1;
   const southWest = mapOrigin;
   const northEast = new L.LatLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio);
@@ -245,10 +239,8 @@ const addLayer = (mapName: string) => {
   const northEast = new L.LatLng((mapHeight - 70) * pixelToLatLngRatio, mapWidth * pixelToLatLngRatio);
   let href: string;
 
-  if (!isFloor && mapScaleInfo.href) {
+  if (mapScaleInfo.href) {
     href = mapScaleInfo.href;
-  } else if (isFloor && mapScaleInfo.floorInfo?.info?.href) {
-    href = mapScaleInfo.floorInfo?.info?.href;
   } else {
     href = '//game.gtimg.cn/images/dfm/cp/a20240729directory/img/';
   }
@@ -258,13 +250,13 @@ const addLayer = (mapName: string) => {
   currLayer = new L.TileLayer(`${href}${mapName}/{z}_{x}_{y}.jpg`, {
     minZoom,
     maxZoom: 8,
-    maxNativeZoom: isFloor ? (mapScaleInfo.floorInfo.info?.maxZomm || 6) : 4,
+    maxNativeZoom: 4,
     noWrap: false,
     attribution: '© OpenStreetMap contributors',
     bounds,
     errorTileUrl: `${href}${mapName}/0_0_0.jpg`,
-    tileSize: isFloor ? 512 : 256,
-    zoomOffset: isFloor ? -1 : 0
+    tileSize: 256,
+    zoomOffset: 0,
   }).addTo(map);
 
   currLayer.name = mapName;
