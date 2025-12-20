@@ -74,5 +74,10 @@ export default defineConfig({
                 }
             }
         }
+    },
+    server: {
+        allowedHosts: [
+            "map.coolxi.eu.org",
+        ],
     }
 })
