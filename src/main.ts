@@ -9,7 +9,7 @@ import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import router from '@/router/index';
 import {useWebViewDetector} from "@/utils/antiWebView.ts";
 import {
-    fpjsPlugin, FpjsVueOptions
+    fpjsPlugin, FpjsVueOptions, FingerprintJSPro
 } from '@fingerprintjs/fingerprintjs-pro-vue-v3';
 
 const app = createApp(App);
@@ -22,7 +22,15 @@ app.use(router);
 app.use(fpjsPlugin, {
     loadOptions: {
         apiKey: "bFxHShSNwE9M8wI5IuM8",
-        region: "ap"
+        region: "ap",
+        endpoint: [
+            "https://fp.coolxi.eu.org",
+            FingerprintJSPro.defaultEndpoint,
+        ],
+        scriptUrlPattern: [
+            "https://fp.coolxi.eu.org/web/v<version>/<apiKey>/loader_v<loaderVersion>.js",
+            FingerprintJSPro.defaultScriptUrlPattern
+        ],
     },
 } as FpjsVueOptions);
 app.mount('#app')
