@@ -34,6 +34,8 @@ watch(
       if (newVal.visitorId && newVal.isWebView) {
         console.log('检测到 WebView，准备跳转...');
         router.push({name: 'anti-webview'});
+      } else {
+        console.log('已通过浏览器验证.');
       }
     },
     { immediate: true, deep: true }
