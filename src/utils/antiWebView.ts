@@ -1,25 +1,15 @@
+// utils/antiWebView.ts
 import { useVisitorData } from '@fingerprintjs/fingerprintjs-pro-vue-v3';
 import { computed } from 'vue';
 
-// 1. 定义一个完整的接口，包含所有你需要用到的字段
 interface FingerprintData {
     visitorId: string;
-    requestId: string;
-    // Smart Signals 字段
-    androidWebView?: {
-        result: boolean;
-    };
-    appleWebView?: {
-        result: boolean;
-    };
-    // 如果需要其他字段，可以继续添加
     browserName?: string;
-    confidence?: { score: number };
+    os?: string;
 }
 
 export interface WebViewCheckResult {
     isWebView: boolean;
-    type: 'Android' | 'iOS' | 'None';
     visitorId: string;
 }
 
@@ -31,25 +21,23 @@ export function useWebViewDetector() {
     const checkResult = computed((): WebViewCheckResult => {
         const result = data.value as unknown as FingerprintData;
 
-        if (!result || !result.visitorId) {
-            return { isWebView: false, type: 'None', visitorId: '' };
-        }
+        if (!result) return { isWebView: false, visitorId: '' };
 
-        const isAndroid = !!result.androidWebView?.result;
-        const isIOS = !!result.appleWebView?.result;
+        // 精准匹配你提供的： "Chrome Mobile WebView"
+        const bName = result.browserName || '';
+        const isWebView = bName.toLocaleLowerCase().includes('webview');
 
         return {
-            isWebView: isAndroid || isIOS,
-            type: isAndroid ? 'Android' : (isIOS ? 'iOS' : 'None'),
-            visitorId: result.visitorId,
+            isWebView,
+            visitorId: result.visitorId || '',
         };
     });
 
     return {
         checkResult,
+        data,
         isLoading,
         error,
-        data,
-        refresh: (options?: { ignoreCache?: boolean }) => getData(options),
+        refresh: (options?: any) => getData(options),
     };
 }
