@@ -4,12 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=8848 --open",
+    "dev": "vite --port=8848 --open --host",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview --port=8849"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@fingerprintjs/fingerprintjs-pro-vue-v3": "^1.5.0",
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
     "@fortawesome/vue-fontawesome": "^3.1.2",
@@ -27,6 +28,7 @@
     "pinia-plugin-persistedstate": "^4.7.1",
     "typescript": "^5.9.3",
     "unplugin-icons": "^22.5.0",
+    "vconsole": "^3.15.1",
     "vue": "^3.5.24",
     "vue-router": "^4.6.3"
   },

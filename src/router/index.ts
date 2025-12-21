@@ -6,6 +6,11 @@ const routes = [
         name: 'home',
         component: () => import('@/views/Home.vue'),
     },
+    {
+        path: '/anti-webview',
+        name: 'anti-webview',
+        component: () => import('@/views/403.vue'),
+    }
 ];
 
 const router = createRouter({

@@ -7,15 +7,24 @@ import ElementPlus from 'element-plus'
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import router from '@/router/index';
+import {useWebViewDetector} from "@/utils/antiWebView.ts";
+import {
+    fpjsPlugin, FpjsVueOptions
+} from '@fingerprintjs/fingerprintjs-pro-vue-v3';
 
 const app = createApp(App);
 const pinia = createPinia();
-
 
 pinia.use(piniaPluginPersistedstate);
 app.use(ElementPlus)
 app.use(pinia);
 app.use(router);
+app.use(fpjsPlugin, {
+    loadOptions: {
+        apiKey: "bFxHShSNwE9M8wI5IuM8",
+        region: "ap"
+    },
+} as FpjsVueOptions);
 app.mount('#app')
 
 router.isReady().then(async () => {
