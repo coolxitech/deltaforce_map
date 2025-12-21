@@ -31,7 +31,6 @@ const { checkResult, isLoading } = useWebViewDetector();
 watch(
     () => checkResult.value,
     (newVal) => {
-      // 只有当拿到 visitorId（说明请求已完成）且检测为 WebView 时才跳转
       if (newVal.visitorId && newVal.isWebView) {
         console.log('检测到 WebView，准备跳转...');
         router.push({name: 'anti-webview'});

@@ -7,6 +7,7 @@
       </p>
       <p class="tip">
         请使用标准浏览器（如 Chrome、Safari、Edge 等）打开本页面。
+        此措施是为了防止网页内容被恶意利用换取利益。
       </p>
       <div class="icon">🚫</div>
     </div>
