@@ -409,11 +409,11 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
       </div>` : '';
 
   const nameDiv = () => {
-    if (player.isBot) return botSetting.value.info.name ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">名称:AI</div>` : '';
+    if (player.isBot) return botSetting.value.info.name ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">名称:${player.roleName}</div>` : '';
     return playerSetting.value.info.name ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">名称:${player.name}</div>` : '';
   };
 
-  const roleNameDiv = () => player.isBot ? '' : `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">角色:${player.roleAlias}</div>`;
+  const roleNameDiv = () => `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">角色:${player.roleAlias}</div>`;
 
   const healthDiv = () => {
     if (player.isBot) return botSetting.value.info.health ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health}</div>` : '';
@@ -427,7 +427,7 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
   const footerDiv = `</div>`;
 
   if (player.isBot) {
-    content = botSetting.value.info.display ? headDiv + playerAvatarDiv + nameDiv() + footerDiv : '';
+    content = botSetting.value.info.display ? headDiv + playerAvatarDiv + nameDiv() + roleNameDiv() + footerDiv : '';
   } else {
     content = headDiv + teamIdDiv + playerAvatarDiv + storyHeightDiv() + healthBarDiv() + nameDiv() + roleNameDiv() + healthDiv() + weaponDiv() + isCheatDiv() + footerDiv;
   }
