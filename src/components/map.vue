@@ -437,6 +437,9 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
     return playerSetting.value.info.health ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health}</div>` : '';
   };
 
+  const helmetDiv = () => !player.isBot ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">头盔耐久:${player.helmetDurability}</div>` : '';
+  const armorDiv = () => !player.isBot ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">护甲耐久:${player.armorDurability}</div>` : '';
+
   const weaponDiv = () => playerSetting.value.info.weapon && !player.isBot ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">武器:${player.weapon}</div>` : '';
 
   const isCheatDiv = () => player.isCheater ? `<div class='detail-text' style="font-weight: bold;color: red;font-size: 2vh">挂狗队</div>` : '';
@@ -446,7 +449,7 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
   if (player.isBot) {
     content = botSetting.value.info.display ? headDiv + playerAvatarDiv + nameDiv() + roleNameDiv() + footerDiv : '';
   } else {
-    content = headDiv + teamIdDiv + playerAvatarDiv + storyHeightDiv() + healthBarDiv() + nameDiv() + roleNameDiv() + healthDiv() + weaponDiv() + isCheatDiv() + footerDiv;
+    content = headDiv + teamIdDiv + playerAvatarDiv + storyHeightDiv() + healthBarDiv() + nameDiv() + roleNameDiv() + healthDiv() + helmetDiv() + armorDiv() + weaponDiv() + isCheatDiv() + footerDiv;
   }
 
   return new L.DivIcon({
