@@ -389,10 +389,27 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
       ? `style="border-left: ${playerAvatarBorderWidth}px solid ${borderColor(player.helmet)}; border-right: ${playerAvatarBorderWidth}px solid ${borderColor(player.armor)};"`
       : `style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; border: ${playerAvatarBorderWidth}px solid ${teamColor};"`;
 
-  const avatar = (roleName: string) => new URL(`../assets/images/${roleName}.png`, import.meta.url).href;
+  const avatar = (roleName: string, roleAlias: string) => {
+    if (roleName === 'Boss') {
+      if (roleAlias == '德穆兰') {
+        roleName = 'dml';
+      } else if (roleAlias == '赛伊德') {
+        roleName = 'syd';
+      } else if (roleAlias == '雷斯') {
+        roleName = 'ls';
+      } else if (roleAlias == '渡鸦') {
+        roleName = 'dy';
+      } else if (roleAlias == '格赫罗斯') {
+        roleName = 'ghls';
+      } else {
+        roleName = 'boss';
+      }
+    }
+    return new URL(`../assets/images/${roleName}.png`, import.meta.url).href;
+  };
 
   const playerAvatarDiv = `<div class="map-icon-bg2" ${displayArmor()}>
-        <img src="${avatar(player.roleName)}" style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; transform: scale(${1 / playerAvatarRadius});" alt="${player.roleAlias}"/>
+        <img src="${avatar(player.roleName, player.roleAlias)}" style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; transform: scale(${1 / playerAvatarRadius});" alt="${player.roleAlias}"/>
     </div>`;
 
   const storyHeightDiv = () => {

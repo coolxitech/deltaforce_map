@@ -140,6 +140,12 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
                 if (player.h === '雷***斯') {
                     roleAlias = '雷斯';
                 }
+                if (player.h === '渡***鸦') {
+                    roleAlias = '渡鸦';
+                }
+                if (player.h === '格***斯') {
+                    roleAlias = '格赫罗斯';
+                }
             }
             return {
                 name: player.h || '未知玩家',
