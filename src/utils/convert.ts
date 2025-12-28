@@ -127,12 +127,23 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
         players = raw.P2.map(player => {
             const roleId = player.g ?? 0;
             const roleKey = ROLE_NAME_MAP[roleId] ?? `unknown_${roleId}`;
-            const roleName = roleKey;
-            const roleAlias = ROLE_ALIAS_MAP[roleKey] ?? '';
-
+            let roleName = roleKey;
+            let roleAlias = ROLE_ALIAS_MAP[roleKey] ?? '';
+            if (player.d === 1) {
+                roleName = 'Boss';
+                if (player.h === '德***兰') {
+                    roleAlias = '德穆兰';
+                }
+                if (player.h === '赛***德') {
+                    roleAlias = '赛伊德';
+                }
+                if (player.h === '雷***斯') {
+                    roleAlias = '雷斯';
+                }
+            }
             return {
                 name: player.h || '未知玩家',
-                isBot: player.c === 1,
+                isBot: player.c === 1 || player.d === 1,
                 isBoss: player.d === 1,
                 isCheater: player.b === 1,
                 role: roleId,
@@ -141,7 +152,9 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
                 weapon: player.i || '未知武器',
                 health: player.n ?? 100,
                 helmet: player.j,
+                helmetDurability: player.k,
                 armor: player.l,
+                armorDurability: player.m,
                 teamId: player.f,
                 position: {
                     ...applyOffset({ x: player.p, y: player.q }, offset),

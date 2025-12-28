@@ -7,7 +7,6 @@ import ElementPlus from 'element-plus'
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 import router from '@/router/index';
-import {useWebViewDetector} from "@/utils/antiWebView.ts";
 import {
     fpjsPlugin, FpjsVueOptions, FingerprintJSPro
 } from '@fingerprintjs/fingerprintjs-pro-vue-v3';

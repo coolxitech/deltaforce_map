@@ -23,7 +23,6 @@ export function useWebViewDetector() {
 
         if (!result) return { isWebView: false, visitorId: '' };
 
-        // 精准匹配你提供的： "Chrome Mobile WebView"
         const bName = result.browserName || '';
         const isWebView = bName.toLocaleLowerCase().includes('webview');
 

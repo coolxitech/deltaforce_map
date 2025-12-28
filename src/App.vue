@@ -25,7 +25,6 @@ import { storeToRefs } from 'pinia';
 import axios from "axios";
 import { useWebViewDetector } from "@/utils/antiWebView.ts";
 
-const router = useRouter();
 const store = SettingStore();
 const { itemsInfo } = storeToRefs(store);
 
