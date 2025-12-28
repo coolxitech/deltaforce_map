@@ -7,7 +7,7 @@ import type { Position, Item, Player, Map, Box } from "@/interface/GameData.ts";
 const ROLE_NAME_MAP: Record<number, string> = {
     13: 'bt',12: 'zj', 11: 'yy', 10: 'wm', 5: 'mxw', 4: 'ln',
     3: 'myr', 2: 'sl', 9: 'wll', 1: 'g', 6: 'fy',
-    8: 'wl', 7: 'hl',0: 'default'
+    8: 'wl', 7: 'hl',0: 'a'
 } as const;
 
 const ROLE_NAME_MAP_OFFICIAL: Record<number, string> = {
