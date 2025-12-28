@@ -110,6 +110,7 @@ export interface Player {
     isBot: boolean;
     isBoss: boolean
     isCheater: boolean;
+    cheaterOwner?: boolean;
     role: number;
     roleName: string;
     roleAlias: string;

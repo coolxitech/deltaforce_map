@@ -152,6 +152,7 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
                 isBot: player.c === 1 || player.d === 1,
                 isBoss: player.d === 1,
                 isCheater: player.b === 1,
+                cheaterOwner: player.e === 1,
                 role: roleId,
                 roleName: player.c === 1 ? 'AI' : roleName,
                 roleAlias: roleAlias,

@@ -444,12 +444,14 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
 
   const isCheatDiv = () => player.isCheater ? `<div class='detail-text' style="font-weight: bold;color: red;font-size: 2vh">挂狗队</div>` : '';
 
+  const cheatOwnerDiv = player.cheaterOwner ? `<div class='detail-text' style="font-weight: bold;color: red;font-size: 2vh">挂狗本人</div>` : '';
+
   const footerDiv = `</div>`;
 
   if (player.isBot) {
     content = botSetting.value.info.display ? headDiv + playerAvatarDiv + nameDiv() + roleNameDiv() + footerDiv : '';
   } else {
-    content = headDiv + teamIdDiv + playerAvatarDiv + storyHeightDiv() + healthBarDiv() + nameDiv() + roleNameDiv() + healthDiv() + helmetDiv() + armorDiv() + weaponDiv() + isCheatDiv() + footerDiv;
+    content = headDiv + teamIdDiv + playerAvatarDiv + storyHeightDiv() + healthBarDiv() + nameDiv() + roleNameDiv() + healthDiv() + helmetDiv() + armorDiv() + weaponDiv() + isCheatDiv() + cheatOwnerDiv + footerDiv;
   }
 
   return new L.DivIcon({

@@ -37,6 +37,7 @@ export interface RawData {
         c: number;
         // 是否Boss
         d: number;
+        // 挂狗本人标识
         e: number;
         // 队伍ID
         f: number;

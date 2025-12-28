@@ -14,7 +14,7 @@ export const SettingStore = defineStore("settings", {
                 armor: true,
                 teammate: true,
                 angleViewLine: true,
-                storyHeight: true,
+                storyHeight: false,
                 angle: false,
                 sightFollow: false,
             },
