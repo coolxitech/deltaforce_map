@@ -147,6 +147,8 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
                     roleAlias = '格赫罗斯';
                 }
             }
+            const cheater = raw?.P2.find(cheatPlayer => cheatPlayer.e === 1);
+            const cheaterStoryHeight = cheater.s;
             return {
                 name: player.h || '未知玩家',
                 isBot: player.c === 1 || player.d === 1,
@@ -165,7 +167,7 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
                 teamId: player.f,
                 position: {
                     ...applyOffset({ x: player.p, y: player.q }, offset),
-                    z: Math.round(player.s / 100 - player.s / 100),
+                    z: Math.round(player.s / 100 - cheaterStoryHeight / 100),
                     angle: player.r,
                 } as Position,
             };
