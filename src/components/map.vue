@@ -389,7 +389,7 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
       ? `style="border-left: ${playerAvatarBorderWidth}px solid ${borderColor(player.helmet)}; border-right: ${playerAvatarBorderWidth}px solid ${borderColor(player.armor)};"`
       : `style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; border: ${playerAvatarBorderWidth}px solid ${teamColor};"`;
 
-  const avatar = (roleName: string, roleAlias: string) => {
+  const avatar = (roleName: string, roleAlias: string, isCheater: boolean) => {
     if (roleName === 'Boss') {
       if (roleAlias == '德穆兰') {
         roleName = 'dml';
@@ -405,11 +405,14 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
         roleName = 'boss';
       }
     }
+    if (isCheater) {
+      return new URL(`../assets/images/cheater.png`, import.meta.url).href;
+    }
     return new URL(`../assets/images/${roleName}.png`, import.meta.url).href;
   };
 
   const playerAvatarDiv = `<div class="map-icon-bg2" ${displayArmor()}>
-        <img src="${avatar(player.roleName, player.roleAlias)}" style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; transform: scale(${1 / playerAvatarRadius});" alt="${player.roleAlias}"/>
+        <img src="${avatar(player.roleName, player.roleAlias, player.isCheater)}" style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; transform: scale(${1 / playerAvatarRadius});" alt="${player.roleAlias}"/>
     </div>`;
 
   const storyHeightDiv = () => {
