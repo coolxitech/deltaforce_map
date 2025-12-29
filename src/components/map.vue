@@ -414,10 +414,11 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
 
   const storyHeightDiv = () => {
     if (!playerSetting.value.info.storyHeight) return '';
-    let directionColor = 'gray', direction = '0';
+    let directionColor: string = 'gray'
+    let direction: string = '';
     if (player.position.z > 0) { directionColor = 'green'; direction = '▲'; }
     if (player.position.z < 0) { directionColor = 'red'; direction = '▼'; }
-    return `<div class="height-indicator" style="color: ${directionColor};">${direction}</div>`;
+    return `<div class="height-indicator" style="color: ${directionColor};">${direction} ${Math.abs(player.position.z).toFixed(1)}</div>`;
   };
 
   const healthBarDiv = () => playerSetting.value.info.health ? `
