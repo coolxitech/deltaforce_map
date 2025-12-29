@@ -416,9 +416,10 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
     if (!playerSetting.value.info.storyHeight) return '';
     let directionColor: string = 'gray'
     let direction: string = '';
-    if (player.position.z > 0) { directionColor = 'green'; direction = '▲'; }
-    if (player.position.z < 0) { directionColor = 'red'; direction = '▼'; }
-    return `<div class="height-indicator" style="color: ${directionColor};">${direction} ${Math.abs(player.position.z).toFixed(1)}</div>`;
+    let directionNumber: string = '';
+    if (player.position.z > 0) { directionColor = 'green'; direction = '▲'; directionNumber = player.position.z.toFixed(1);}
+    if (player.position.z < 0) { directionColor = 'red'; direction = '▼'; directionNumber = Math.abs(player.position.z).toFixed(1);}
+    return `<div class="height-indicator" style="color: ${directionColor};">${direction} ${directionNumber}</div>`;
   };
 
   const healthBarDiv = () => playerSetting.value.info.health ? `
