@@ -129,24 +129,30 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
             const roleKey = ROLE_NAME_MAP[roleId] ?? `unknown_${roleId}`;
             let roleName = roleKey;
             let roleAlias = ROLE_ALIAS_MAP[roleKey] ?? '';
-            if (player.d === 1) {
-                roleName = 'Boss';
-                if (player.h === '德***兰') {
-                    roleAlias = '德穆兰';
-                }
-                if (player.h === '赛***德') {
-                    roleAlias = '赛伊德';
-                }
-                if (player.h === '雷***斯') {
-                    roleAlias = '雷斯';
-                }
-                if (player.h === '渡***鸦') {
-                    roleAlias = '渡鸦';
-                }
-                if (player.h === '格***斯') {
-                    roleAlias = '格赫罗斯';
+            if (player.c === 1) {
+                if (player.d === 1) {
+                    roleName = 'Boss';
+                    if (player.h === '德***兰') {
+                        roleAlias = '德穆兰';
+                    }
+                    if (player.h === '赛***德') {
+                        roleAlias = '赛伊德';
+                    }
+                    if (player.h === '雷***斯') {
+                        roleAlias = '雷斯';
+                    }
+                    if (player.h === '渡***鸦') {
+                        roleAlias = '渡鸦';
+                    }
+                    if (player.h === '格***斯') {
+                        roleAlias = '格赫罗斯';
+                    }
+                } else {
+                    roleName = 'AI';
+                    roleAlias = ROLE_ALIAS_MAP[roleKey] ?? '';
                 }
             }
+
             const cheater = raw?.P2.find(cheatPlayer => cheatPlayer.e === 1);
             const cheaterStoryHeight = cheater.s;
             return {
@@ -156,7 +162,7 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
                 isCheater: player.b === 1,
                 cheaterOwner: player.e === 1,
                 role: roleId,
-                roleName: player.c === 1 ? 'AI' : roleName,
+                roleName: roleName,
                 roleAlias: roleAlias,
                 weapon: player.i || '未知武器',
                 health: player.n ?? 100,
