@@ -165,7 +165,7 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
                 teamId: player.f,
                 position: {
                     ...applyOffset({ x: player.p, y: player.q }, offset),
-                    z: player.s,
+                    z: Math.round(player.s / 100 - player.s / 100),
                     angle: player.r,
                 } as Position,
             };
