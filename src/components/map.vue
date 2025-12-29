@@ -412,7 +412,7 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
   };
 
   const playerAvatarDiv = `<div class="map-icon-bg2" ${displayArmor()}>
-        <img src="${avatar(player.roleName, player.roleAlias, player.isCheater)}" style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; transform: scale(${1 / playerAvatarRadius});" alt="${player.roleAlias}"/>
+        <img src="${avatar(player.roleName, player.roleAlias, player.cheaterOwner)}" style="width: ${playerAvatarSize}px; height: ${playerAvatarSize}px; transform: scale(${1 / playerAvatarRadius});" alt="${player.roleAlias}"/>
     </div>`;
 
   const storyHeightDiv = () => {
