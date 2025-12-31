@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {ref, onMounted, Ref} from 'vue'
+import {h, ref, Ref} from 'vue'
 import {SettingStore} from '@/store/settingStore'
 import {storeToRefs} from 'pinia'
 import {useRem} from '@/hooks/useRem.ts';
@@ -11,7 +11,7 @@ import SettingPanel from "@/components/SettingPanel.vue";
 import { getUrlParam } from "@/utils/url.ts";
 import VideoSplash from "@/components/VideoSplash.vue";
 import {Box, Item, Player, BoxHandler, ItemHandler, PlayerHandler} from "@/interface/GameData.ts";
-import {convert_un, convert_ray} from "@/utils/convert.ts";
+import {convert_un, convert_ray, convert_other} from "@/utils/convert.ts";
 import CheatPlayerCard from "@/components/CheatPlayerCard.vue";
 import axios from "axios";
 import pako from "pako";
@@ -20,8 +20,8 @@ import type { RawData as RawData_ray } from "@/interface/ray/RawData.ts";
 
 useRem()
 const settings = SettingStore()
-const { loading, itemsInfo } = storeToRefs(settings)
-
+const { itemsInfo } = storeToRefs(settings)
+const loading = ref(true);
 const loadingMessage = ref('挂狗还没进游戏，去找找其他房间吧...');
 let boxes:Ref<Box[]> = ref([]);
 let items:Ref<Item[]> = ref([]);
@@ -209,11 +209,8 @@ if (address?.value) {
         console.error("解析数据时出错:", error);
       }
     };
-
-    socket.onclose = (event: CloseEvent) => {
-      console.log("服务器断开了连接:" + event.reason);
-    };
-  } else if (type.value === 'ray') {
+  }
+  if (type.value === 'ray') {
     socket = new WebSocket('ws://' + address.value + '/web');
     socket.binaryType = "arraybuffer";
     socket.onopen = async () => {
@@ -277,16 +274,46 @@ if (address?.value) {
       }
     };
   }
+  if (type.value === 'other') {
+    socket = new WebSocket('ws://' + address.value);
+    socket.binaryType = "arraybuffer";
+    socket.onopen = async () => {
+      console.log("已连接挂狗地图,正在获取挂狗地图的鉴权...");
+    };
 
+    socket.onmessage = async (event) => {
+      let data: any;
+      if (!(event.data instanceof ArrayBuffer)) return;
+      try {
+        data = event.data;
+        const raw = new Uint8Array(data);
+        const inflated = pako.inflate(raw);
+        const decode = new TextDecoder('utf-8').decode(inflated);
+        const jsonData = JSON.parse(decode);
+        const gameData = convert_other(jsonData, itemsInfo.value);
+        itemHandler(gameData);
+        boxHandler(gameData);
+        playerHandler(gameData);
+        currentMap.value = gameData.map.name;
+        loading.value = gameData.map.name === '';
+        // console.log(currentMap.value);
+      } catch (error) {
+        console.error("解析数据时出错:", error);
+      }
+    };
+  }
 
-
-  socket.onclose = () => {
+  socket.onclose = (event: CloseEvent) => {
     ElNotification({
       title: '提示',
-      message: '挂狗不让看了，换个房间吧.',
+      message: h('div', [
+          h('p', '已断开挂狗地图'),
+          h('p', '原因是:' + event.reason),
+      ]),
       type: 'error',
     });
     console.log("已断开挂狗地图");
+    loading.value = true;
   };
 } else {
   ElNotification({

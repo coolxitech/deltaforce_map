@@ -111,7 +111,7 @@ export interface Player {
     isBoss: boolean
     isCheater: boolean;
     cheaterOwner?: boolean;
-    role: number;
+    role?: number;
     roleName: string;
     roleAlias: string;
     weapon: string;
@@ -267,5 +267,5 @@ export interface Position {
     x: number;
     y: number;
     z?: number;
-    angle?: number;
+    angle?: number | { x: number, y: number };
 }

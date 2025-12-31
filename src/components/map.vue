@@ -339,10 +339,8 @@ const changeMapLv = (type: string) => {
 };
 
 const createPlayerDivIcon = (player: Player): L.DivIcon => {
-  // 此函数内容保持原样（非常长，这里省略以节省篇幅，实际使用时请粘贴原完整实现）
-  // ...（原 createPlayerDivIcon 完整代码）
   let teamColor: string;
-  let content: string = '';
+  let content: string;
   const playerAvatarSize = otherSetting.value.playerAvatarSize;
   const playerAvatarRadius = playerAvatarSize / 30;
   const playerAvatarBgHeight = Math.round(12 * playerAvatarRadius);
@@ -438,12 +436,12 @@ const createPlayerDivIcon = (player: Player): L.DivIcon => {
   const roleNameDiv = () => `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">角色:${player.roleAlias}</div>`;
 
   const healthDiv = () => {
-    if (player.isBot) return botSetting.value.info.health ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health}</div>` : '';
-    return playerSetting.value.info.health ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health}</div>` : '';
+    if (player.isBot) return botSetting.value.info.health ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health.toFixed()}</div>` : '';
+    return playerSetting.value.info.health ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">血量:${player.health.toFixed()}</div>` : '';
   };
 
-  const helmetDiv = () => !player.isBot ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">头盔耐久:${player.helmetDurability}</div>` : '';
-  const armorDiv = () => !player.isBot ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">护甲耐久:${player.armorDurability}</div>` : '';
+  const helmetDiv = () => !player.isBot ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">头盔耐久:${player.helmetDurability.toFixed()}</div>` : '';
+  const armorDiv = () => !player.isBot ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">护甲耐久:${player.armorDurability.toFixed()}</div>` : '';
 
   const weaponDiv = () => playerSetting.value.info.weapon && !player.isBot ? `<div class='detail-text' style="font-size: ${teamIdFontSize}px;">武器:${player.weapon}</div>` : '';
 
@@ -502,9 +500,9 @@ const createBoxDivIcon = (box: Box): L.DivIcon => {
 
 const createItemDivIcon = (item: Item): L.DivIcon | null => {
   const itemId = item.id;
-  const inItems = itemsInfo.value.some(p => p.objectID == itemId);
-  const itemGrade = inItems ? itemsInfo.value.find(p => p.objectID == itemId)!.grade : item.grade;
-  const itemPrice = (inItems ? itemsInfo.value.find(p => p.objectID == itemId)!.avgPrice / 1000 : item.price / 1000).toFixed(1) + 'K';
+  const inItems = itemsInfo.value.some((i: any) => i.objectID == itemId);
+  const itemGrade = inItems ? itemsInfo.value.find((i: any) => i.objectID == itemId)!.grade : item.grade;
+  const itemPrice = (inItems ? itemsInfo.value.find((i: any) => i.objectID == itemId)!.avgPrice / 1000 : item.price / 1000).toFixed(1) + 'K';
   const itemImgUrl = inItems ? `https://playerhub.df.qq.com/playerhub/60004/object/${itemId}.png` : '';
 
   const showName = itemSetting.value.info.name;

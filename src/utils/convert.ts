@@ -1,5 +1,6 @@
 import type { RawData as RawData_un } from "@/interface/un/RawData.ts";
 import type { RawData as RawData_ray } from "@/interface/ray/RawData.ts";
+import type { RawData as RawData_other } from "@/interface/other/RawData.ts";
 import type { Position, Item, Player, Map, Box } from "@/interface/GameData.ts";
 /**
  * 角色映射表
@@ -32,6 +33,23 @@ const ROLE_ALIAS_MAP: Record<string, string> = {
     'g': '女医', 'fy': '疯医', 'wl': '威风的龙', 'hl': '花来!', 'default': 'Boss', 'a': '机哥'
 } as const;
 
+const ROLE_NAME_MAP_CHINESE: Record<string, string> = {
+    '露娜': 'ln',
+    '疾风': 'zj',
+    '牧羊人': 'myr',
+    '佐亚': 'g',
+    '威龙': 'wl',
+    '红狼': 'hl',
+    '无名': 'wm',
+    '乌鲁鲁': 'wll',
+    '骇爪': 'mxw',
+    '深蓝': 'sl',
+    '比特': 'bt',
+    '银翼': 'yy',
+    '蜂医': 'fy',
+    '0': 'a',
+} as const;
+
 let prevState: {
     boxes: Box[];
     items: Item[];
@@ -48,16 +66,26 @@ interface MapConfig {
 
 const MAP_CONFIG_TABLE: Record<number, MapConfig> = {
     0: { name: '', offset: { x: 0, y: 0 } },
-    1: { name: 'daba', offset: { x: 357385, y: -769888 } },   // 零号大坝
-    2: { name: 'cgxg', offset: { x: 400062, y: -641652 } },             // 长弓溪谷（暂无偏移）
-    3: { name: 'bks',  offset: { x: 378673, y: -448841 } },  // 巴克什
-    4: { name: 'htjd', offset: { x: 668720, y: -452754 } },  // 航天基地
-    5: { name: 'cxjy', offset: { x: 53272,  y: -51971 } },    // 潮汐监狱
+    1: { name: 'daba', offset: { x: 357385, y: -769888 } }, // 零号大坝
+    2: { name: 'cgxg', offset: { x: 400062, y: -641652 } }, // 长弓溪谷
+    3: { name: 'bks',  offset: { x: 378673, y: -448841 } }, // 巴克什
+    4: { name: 'htjd', offset: { x: 668720, y: -452754 } }, // 航天基地
+    5: { name: 'cxjy', offset: { x: 53272,  y: -51971 } }, // 潮汐监狱
 } as const;
 
 // 默认配置（防止崩溃）
 const DEFAULT_MAP_CONFIG: MapConfig = { name: '未知地图', offset: { x: 0, y: 0 } };
+const NAME_TO_MAP_CONFIG = new Map<string, MapConfig>();
+Object.values(MAP_CONFIG_TABLE).forEach(config => {
+    if (config.name) {  // 排除空 name
+        NAME_TO_MAP_CONFIG.set(config.name.toLowerCase(), config);
+    }
+});
 
+// 核心函数：输入地图名（缩写），返回 MapConfig 或 undefined
+function getMapConfig(mapName: string): MapConfig | undefined {
+    return NAME_TO_MAP_CONFIG.get(mapName.trim().toLowerCase());
+}
 /**
  * 应用坐标偏移
  */
@@ -366,4 +394,96 @@ export const convert_ray = async (
     }
 
     return result;
+};
+
+export const convert_other = (raw: RawData_other, itemsInfo: any[]): {
+    boxes: Box[];
+    items: Item[];
+    map: Map;
+    players: Player[];
+} => {
+    const mapConfig = getMapConfig(raw?.map.replace('map_', '')) ?? DEFAULT_MAP_CONFIG;
+    const { name: mapName, offset } = mapConfig;
+
+    let boxes: Box[] = [];
+    let items: Item[] = [];
+    let players: Player[] = [];
+    // ========== Box ==========
+    if(raw?.DeadBox) {
+        boxes = raw.DeadBox.map(box => ({
+            isBot: box.IsAi,
+            position: {
+                x: box.LocationX + offset.x,
+                y: box.LocationY + offset.y,
+            },
+        }));
+    }
+    // ========== Item ==========
+    if(raw?.Item) {
+        items = raw.Item.map(item => {
+            let itemInfo = itemsInfo.find((i: any) => String(i.objectID) === item.IdName);
+            if (!itemInfo) {
+                return {
+                    id: item.IdName,
+                    price: item.price,
+                    name: item.ItemName,
+                    grade: item.Quality,
+                    position: applyOffset({ x: item.LocationX, y: item.LocationY }, offset),
+                };
+            } else {
+                return {
+                    id: item.IdName,
+                    price: itemInfo.avgPrice,
+                    name: itemInfo.objectName,
+                    grade: itemInfo.grade,
+                    position: applyOffset({ x: item.LocationX, y: item.LocationY }, offset),
+                };
+            }
+        });
+    }
+    // ========== Map ==========
+    const map: Map = { name: mapName };
+    // ========== Player ==========
+    if(raw?.Player) {
+        players = raw.Player.map(player => {
+            const roleId = ROLE_NAME_MAP_CHINESE[player.HeroName];
+            const roleKey = ROLE_NAME_MAP_CHINESE[player.HeroName] ?? `unknown_${roleId}`;
+            if (roleKey === 'unknown_' + roleId) {
+                console.log(player.HeroName)
+            }
+
+            let roleName = roleKey;
+            let roleAlias = ROLE_ALIAS_MAP[roleKey] ?? '';
+            if (player.IsAi) {
+                if (player.IsBoss) {
+                    roleName = 'Boss';
+                    roleAlias = player.Name;
+                } else {
+                    roleName = 'AI';
+                    roleAlias = ROLE_ALIAS_MAP[roleKey] ?? '';
+                }
+            }
+            return {
+                name: player.Name,
+                isBot: player.IsAi,
+                isBoss: player.IsBoss,
+                isCheater: player.IsTeam,
+                roleName: roleName,
+                roleAlias: roleAlias,
+                weapon: player.WeaponName,
+                health: player.Health,
+                helmet: player.HeadLevel,
+                helmetDurability: player.ArmorHealth,
+                armor: player.ArmorLevel,
+                armorDurability: player.HeadHealth,
+                teamId: player.TeamId,
+                position: {
+                    ...applyOffset({ x: player.LocationX, y: player.LocationY}, offset),
+                    angle: player.AngleX
+                } as Position,
+            };
+        });
+    }
+
+    return { boxes, items, map, players };
 };

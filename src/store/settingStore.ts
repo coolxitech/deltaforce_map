@@ -5,7 +5,6 @@ export const SettingStore = defineStore("settings", {
         type: 'un',
         playerNum: 0,
         mapId: 0,
-        loading: true,
         playerSetting: {
             info: {
                 name: true,

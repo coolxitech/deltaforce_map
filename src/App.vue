@@ -19,7 +19,6 @@
 
 <script setup>
 import { onMounted, watch, ref } from "vue";
-import { useRouter } from "vue-router";
 import { SettingStore } from '@/store/settingStore';
 import { storeToRefs } from 'pinia';
 import axios from "axios";
