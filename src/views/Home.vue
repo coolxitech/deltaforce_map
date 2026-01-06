@@ -13,10 +13,10 @@ import { getUrlParam } from "@/utils/url.ts";
 import VideoSplash from "@/components/VideoSplash.vue";
 import {Box, Item, Player, BoxHandler, ItemHandler, PlayerHandler} from "@/interface/GameData.ts";
 import {convert_un, convert_ray, convert_other} from "@/utils/convert.ts";
-import axios from "axios";
 import pako from "pako";
 import { decode as msg_decode } from "@msgpack/msgpack";
 import type { RawData as RawData_ray } from "@/interface/ray/RawData.ts";
+import request from "@/api/request.ts";
 
 
 useRem()
@@ -244,7 +244,7 @@ if (address?.value) {
     socket = new WebSocket('ws://' + address.value);
     socket.onopen = async () => {
       console.log("已连接挂狗地图,正在获取挂狗地图的鉴权...");
-      const response = await axios.get(`http://deltaforce.coolxi.eu.org/api/token?address=${address.value}`);
+      const response = await request.get(`/api/token?address=${address.value}`);
       token = response.data.data.token;
       socket.send(JSON.stringify({
         token: token,

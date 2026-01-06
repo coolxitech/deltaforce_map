@@ -23,6 +23,7 @@ import { SettingStore } from '@/store/settingStore';
 import { storeToRefs } from 'pinia';
 import axios from "axios";
 import { useWebViewDetector } from "@/utils/antiWebView.ts";
+import request from "@/api/request.ts";
 
 const store = SettingStore();
 const { itemsInfo } = storeToRefs(store);
@@ -74,7 +75,7 @@ onMounted(async () => {
   // 3. 执行业务请求
   if (itemsInfo.value === null) {
     try {
-      const response = await axios.get('http://deltaforce.coolxi.eu.org/api/items');
+      const response = await request.get('/api/items');
       const dataResponse = await axios.get(response.data.data.url);
       store.setItemsInfo(dataResponse.data);
     } catch (error) {
