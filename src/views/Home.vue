@@ -194,13 +194,11 @@ const playerHandler = (data: any) => {
     if (!data || !Array.isArray(data.players)) return;
 
     const incomingPlayers = data.players;
-    console.log(`Home.vue: 收到玩家数据 ${incomingPlayers.length} 个`); // 调试日志
 
     // 分离真实玩家和机器人
     const realPlayers = incomingPlayers.filter((p: Player) => !p.isBot);
     const bots = incomingPlayers.filter((p: Player) => p.isBot);
 
-    console.log(`Home.vue: 真实玩家 ${realPlayers.length} 个, 机器人 ${bots.length} 个`); // 调试日志
 
     // 直接存储机器人数据，不通过PlayerHandler
     rawBots.value = bots;
