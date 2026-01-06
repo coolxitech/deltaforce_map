@@ -157,6 +157,10 @@ let botMarkers: L.Marker[] = [];
 let botViewLines: L.Polyline[] = [];
 let botArrowDecorators: L.PolylineDecorator[] = [];
 
+// 选中的玩家和视角跟随
+const selectedPlayer = ref<Player | null>(null);
+const isFollowingPlayer = ref(false);
+
 /**
  * 清除所有机器人标记
  */
@@ -227,26 +231,97 @@ const redrawAllBots = (bots: Player[]) => {
       const shortEndX = pos.x + shortRayLength * Math.cos(rad);
       const shortEndY = pos.y + shortRayLength * Math.sin(rad);
 
+      // 检查机器人是否瞄准了其他玩家
+      const targetPlayer = checkAimHit(bot, [...props.players, ...bots]);
+      let isAimingEnemy = false;
+      let targetLatLng: L.LatLng | null = null;
+
+      if (targetPlayer && targetPlayer.teamId !== bot.teamId) {
+        isAimingEnemy = true;
+        
+        // 获取目标位置
+        if (!targetPlayer.isBot) {
+          // 对于真实玩家，从playerMarkers获取位置
+          const m = playerMarkers.get(targetPlayer.name);
+          if (m) targetLatLng = m.getLatLng();
+        } else {
+          // 对于机器人，直接计算位置
+          const pos = getMapPos(targetPlayer.position.x, targetPlayer.position.y);
+          targetLatLng = new L.LatLng(pos.y, pos.x);
+        }
+      }
+
       const lineStart: [number, number] = [pos.y, pos.x];
-      const lineEnd: [number, number] = [shortEndY, shortEndX];
+      const lineEnd: [number, number] = isAimingEnemy && targetLatLng ? [targetLatLng.lat, targetLatLng.lng] : [shortEndY, shortEndX];
 
       const baseLineOptions: L.PolylineOptions = {
-        color: playerSetting.value.color.angleViewLine,
-        weight: otherSetting.value.rayWidth,
-        opacity: otherSetting.value.rayOpacity,
+        color: isAimingEnemy ? '#FF0000' : playerSetting.value.color.angleViewLine,
+        weight: isAimingEnemy ? otherSetting.value.rayWidth + 2 : otherSetting.value.rayWidth,
+        opacity: isAimingEnemy ? 1.0 : otherSetting.value.rayOpacity,
         interactive: false,
+        dashArray: isAimingEnemy ? '25, 15' : undefined,
       };
 
       const line = new L.Polyline([lineStart, lineEnd], baseLineOptions).addTo(map);
       botViewLines.push(line);
+
+      // 如果瞄准敌人，添加箭头装饰
+      if (isAimingEnemy) {
+        const arrowPattern = {
+          offset: '100%',
+          repeat: 0,
+          symbol: L.Symbol.arrowHead({
+            pixelSize: 20,
+            pathOptions: { fillOpacity: 1, color: '#FF0000', weight: 0 }
+          })
+        };
+        const decorator = L.polylineDecorator(line, { patterns: [arrowPattern] }).addTo(map);
+        botArrowDecorators.push(decorator);
+      }
     }
   });
 };
 
 /**
+ * 玩家选择处理
+ */
+const handlePlayerSelected = (player: Player) => {
+  selectedPlayer.value = player;
+  isFollowingPlayer.value = true;
+  
+  // 立即跟随到玩家位置
+  followPlayerView(player);
+};
+
+/**
+ * 跟随玩家视角
+ */
+const followPlayerView = (player: Player) => {
+  if (!map || !player.position?.x) return;
+  
+  const { x, y } = getUrlParam('type') !== 'ray'
+      ? getMapPos(player.position.x, player.position.y)
+      : { x: player.position.x, y: player.position.y };
+  
+  // 平滑移动到玩家位置
+  map.setView([y, x], map.getZoom(), {
+    animate: true,
+    duration: 0.5
+  });
+};
+
+/**
+ * 停止跟随玩家
+ */
+const stopFollowing = () => {
+  isFollowingPlayer.value = false;
+  selectedPlayer.value = null;
+};
+
+/**
  * 检查当前玩家的瞄准射线是否击中任何其他玩家
  */
-const checkAimHit = (aimingPlayer: Player, allPlayers: Player[]): string | null => {
+const checkAimHit = (aimingPlayer: Player, allPlayers: Player[]): Player | null => {
   if (aimingPlayer.position.angle == null) return null;
 
   const { x: startX, y: startY } = getMapPos(aimingPlayer.position.x, aimingPlayer.position.y);
@@ -257,12 +332,21 @@ const checkAimHit = (aimingPlayer: Player, allPlayers: Player[]): string | null 
   const dirX = Math.cos(rad);
   const dirY = Math.sin(rad);
 
-  let closestTarget: string | null = null;
+  let closestTarget: Player | null = null;
   let closestDist = Infinity;
 
-  // 遍历所有玩家而不是依赖playerMarkers
+  // 遍历所有玩家，但需要考虑显示设置
   for (const targetPlayer of allPlayers) {
-    if (targetPlayer.name === aimingPlayer.name) continue;
+    if (targetPlayer.name === aimingPlayer.name && 
+        targetPlayer.position.x === aimingPlayer.position.x && 
+        targetPlayer.position.y === aimingPlayer.position.y) {
+      continue; // 跳过自己
+    }
+
+    // 如果目标是机器人但机器人显示被关闭，则跳过
+    if (targetPlayer.isBot && !botSetting.value.info.display) {
+      continue;
+    }
 
     const targetPos = getMapPos(targetPlayer.position.x, targetPlayer.position.y);
     const tx = targetPos.x;
@@ -272,7 +356,7 @@ const checkAimHit = (aimingPlayer: Player, allPlayers: Player[]): string | null 
     const toTargetY = ty - startY;
 
     const proj = toTargetX * dirX + toTargetY * dirY;
-    if (proj < 0) continue;
+    if (proj < 0) continue; // 目标在射线后方
 
     const closestX = startX + proj * dirX;
     const closestY = startY + proj * dirY;
@@ -285,7 +369,7 @@ const checkAimHit = (aimingPlayer: Player, allPlayers: Player[]): string | null 
 
     if (distance < HIT_RADIUS && proj < closestDist) {
       closestDist = proj;
-      closestTarget = targetPlayer.name;
+      closestTarget = targetPlayer;
     }
   }
 
@@ -678,16 +762,22 @@ watch(() => props.players as Player[], async (newPlayers) => {
       const shortEndX = pos.x + shortRayLength * Math.cos(rad);
       const shortEndY = pos.y + shortRayLength * Math.sin(rad);
 
-      const targetKey = checkAimHit(player, [...newPlayers, ...props.bots]);
+      const targetPlayer = checkAimHit(player, [...newPlayers, ...props.bots]);
       let isAimingEnemy = false;
       let targetLatLng: L.LatLng | null = null;
 
-      if (targetKey) {
-        const targetPlayer = [...newPlayers, ...props.bots].find(p => p.name === targetKey);
-        if (targetPlayer && targetPlayer.teamId !== player.teamId) {
-          isAimingEnemy = true;
-          const m = playerMarkers.get(targetKey);
+      if (targetPlayer && targetPlayer.teamId !== player.teamId) {
+        isAimingEnemy = true;
+        
+        // 获取目标位置
+        if (!targetPlayer.isBot) {
+          // 对于真实玩家，从playerMarkers获取位置
+          const m = playerMarkers.get(targetPlayer.name);
           if (m) targetLatLng = m.getLatLng();
+        } else {
+          // 对于机器人，直接计算位置
+          const pos = getMapPos(targetPlayer.position.x, targetPlayer.position.y);
+          targetLatLng = new L.LatLng(pos.y, pos.x);
         }
       }
 
@@ -743,6 +833,18 @@ watch(() => props.players as Player[], async (newPlayers) => {
         map.removeLayer(decorator); 
         playerArrowDecorators.delete(player.name); 
       }
+    }
+  }
+
+  // 如果正在跟随玩家，更新视角
+  if (isFollowingPlayer.value && selectedPlayer.value) {
+    const currentPlayer = newPlayers.find(p => p.name === selectedPlayer.value!.name);
+    if (currentPlayer) {
+      followPlayerView(currentPlayer);
+    } else {
+      // 玩家已下线，停止跟随
+      isFollowingPlayer.value = false;
+      selectedPlayer.value = null;
     }
   }
 
@@ -865,6 +967,14 @@ onMounted(async () => {
     changeMapLv(MAP_ALIAS[props.map as keyof typeof MAP_ALIAS]);
   }
 });
+
+// 暴露函数给父组件调用
+defineExpose({
+  handlePlayerSelected,
+  stopFollowing,
+  isFollowingPlayer,
+  selectedPlayer
+});
 </script>
 
 <template>
@@ -889,6 +999,8 @@ onMounted(async () => {
         {{ item.name }}
       </div>
     </div>
+
+
   </div>
 </template>
 
@@ -897,11 +1009,14 @@ onMounted(async () => {
   position: relative;
   width: 100%;
   height: 100%;
+  z-index: 1; /* 确保地图在较低层级 */
 }
 
 .map {
   width: 100%;
   height: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 /* 根据项目实际情况保留或调整以下样式 */
@@ -909,6 +1024,7 @@ onMounted(async () => {
 .select_map_video,
 .region-list {
   position: absolute;
+  z-index: 10; /* 确保这些元素在地图之上，但在PlayerList之下 */
   /* 其他原有样式请自行补充 */
 }
 </style>

@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import {h, ref, Ref} from 'vue'
+import {h, ref, Ref, computed} from 'vue'
 import {SettingStore} from '@/store/settingStore'
 import {storeToRefs} from 'pinia'
 import {useRem} from '@/hooks/useRem.ts';
 import {ElNotification} from 'element-plus'
 import {useDark} from '@vueuse/core'
 import Maps from '@/components/map.vue'
-import {Setting} from "@element-plus/icons-vue";
+import {Setting, UserFilled} from "@element-plus/icons-vue";
 import SettingPanel from "@/components/SettingPanel.vue";
+import PlayerList from '@/components/PlayerList.vue';  // 已存在
 import { getUrlParam } from "@/utils/url.ts";
 import VideoSplash from "@/components/VideoSplash.vue";
 import {Box, Item, Player, BoxHandler, ItemHandler, PlayerHandler} from "@/interface/GameData.ts";
 import {convert_un, convert_ray, convert_other} from "@/utils/convert.ts";
-import CheatPlayerCard from "@/components/CheatPlayerCard.vue";
 import axios from "axios";
 import pako from "pako";
-import { encode as msg_encode, decode as msg_decode } from "@msgpack/msgpack";
+import { decode as msg_decode } from "@msgpack/msgpack";
 import type { RawData as RawData_ray } from "@/interface/ray/RawData.ts";
+
 
 useRem()
 const settings = SettingStore()
@@ -33,6 +34,65 @@ const cheatTeam: Ref<Player[]> = ref([]);
 const itemHandlerInstance = new ItemHandler();
 const boxHandlerInstance = new BoxHandler();
 const playerHandlerInstance = new PlayerHandler();
+
+// 新增：选中的队伍ID
+const selectedTeam = ref<number | null>(null);
+
+// 地图组件引用
+const mapRef = ref<InstanceType<typeof Maps> | null>(null);
+
+// 跟随状态
+const isFollowingPlayer = ref(false);
+const followedPlayer = ref<Player | null>(null);
+
+
+// ==================== 新增：计算队伍列表 ====================
+const teamGroups = computed(() => {
+  if (players.value.length === 0) return [];
+
+  const map = new Map<number, number>(); // teamId -> 人数
+
+  players.value.forEach(p => {
+    const count = map.get(p.teamId) || 0;
+    map.set(p.teamId, count + 1);
+  });
+
+  // 排序：作弊队伍优先放在最前，其他按 teamId 升序
+  const cheatTeamIds = new Set(cheatTeam.value.map(p => p.teamId));
+
+  const list = Array.from(map.entries()).map(([teamId, count]) => ({
+    teamId,
+    count,
+    isCheaterTeam: cheatTeamIds.has(teamId)
+  }));
+
+  list.sort((a, b) => {
+    if (a.isCheaterTeam && !b.isCheaterTeam) return -1;
+    if (!a.isCheaterTeam && b.isCheaterTeam) return 1;
+    return a.teamId - b.teamId;
+  });
+
+  return list;
+});
+// ===========================================================
+
+// 处理玩家选择事件
+const handlePlayerSelected = (player: Player) => {
+  if (mapRef.value) {
+    mapRef.value.handlePlayerSelected(player);
+    isFollowingPlayer.value = true;
+    followedPlayer.value = player;
+  }
+};
+
+// 停止跟随
+const stopFollowing = () => {
+  if (mapRef.value) {
+    mapRef.value.stopFollowing();
+    isFollowingPlayer.value = false;
+    followedPlayer.value = null;
+  }
+};
 
 
 const itemHandler = (data: any) => {
@@ -135,16 +195,16 @@ const playerHandler = (data: any) => {
 
     const incomingPlayers = data.players;
     console.log(`Home.vue: 收到玩家数据 ${incomingPlayers.length} 个`); // 调试日志
-    
+
     // 分离真实玩家和机器人
     const realPlayers = incomingPlayers.filter((p: Player) => !p.isBot);
     const bots = incomingPlayers.filter((p: Player) => p.isBot);
-    
+
     console.log(`Home.vue: 真实玩家 ${realPlayers.length} 个, 机器人 ${bots.length} 个`); // 调试日志
-    
+
     // 直接存储机器人数据，不通过PlayerHandler
     rawBots.value = bots;
-    
+
     const newNames = new Set();
 
     // 1. 只处理真实玩家数据
@@ -319,8 +379,8 @@ if (address?.value) {
     ElNotification({
       title: '提示',
       message: h('div', [
-          h('p', '已断开挂狗地图'),
-          h('p', '原因是:' + event.reason),
+        h('p', '已断开挂狗地图'),
+        h('p', '原因是:' + event.reason),
       ]),
       type: 'error',
     });
@@ -356,22 +416,72 @@ if (address?.value) {
         <img src="@/assets/images/logo.png" alt="logo"/>
       </div>
       <!-- 右上角普通按钮 -->
-      <div class="right-btn" @click="settingVisible = true" v-show="!settingVisible">
-        <el-icon color="#ffffff">
-          <Setting/>
-        </el-icon>
+      <div class="right-buttons" v-show="!settingVisible">
+        <div class="right-btn" @click="settingVisible = true" title="设置">
+          <el-icon color="#ffffff">
+            <Setting/>
+          </el-icon>
+        </div>
       </div>
     </div>
     <setting-panel v-model="settingVisible"></setting-panel>
     <!-- 主内容（地图 + loading） -->
     <div class="main-content" v-loading="loading" :element-loading-text="loadingMessage">
       <div class="map-wrapper">
-        <Maps :map="currentMap" :players="players" :bots="rawBots" :items="items" :boxes="boxes">
+        <Maps 
+          ref="mapRef"
+          :map="currentMap" 
+          :players="players" 
+          :bots="rawBots" 
+          :items="items" 
+          :boxes="boxes"
+        >
           <div class="img_map_mask"></div>
         </Maps>
       </div>
+
+      <!-- 玩家列表（底部居中） -->
+      <PlayerList
+          :players="players"
+          :bots="rawBots"
+          :cheat-team="cheatTeam"
+          :selected-team="selectedTeam"
+          :is-following-player="isFollowingPlayer"
+          :followed-player="followedPlayer"
+          @player-selected="handlePlayerSelected"
+          @stop-following="stopFollowing"
+      />
+
+      <!-- 新增：队伍下拉选择框（右下角） -->
+      <div class="team-select-wrapper" v-if="teamGroups.length > 0">
+        <el-select
+            v-model="selectedTeam"
+            placeholder="选择队伍查看"
+            clearable
+            popper-class="team-select-popper"
+            size="large"
+            style="width: 240px;"
+        >
+          <el-option
+              v-for="item in teamGroups"
+              :key="item.teamId"
+              :label="`队伍 ${item.teamId} (${item.count} 人)`"
+              :value="item.teamId"
+          >
+            <span>队伍 {{ item.teamId }} ({{ item.count }} 人)</span>
+            <el-tag
+                v-if="item.isCheaterTeam"
+                type="danger"
+                size="small"
+                effect="dark"
+                style="margin-left: 8px;"
+            >
+              作弊
+            </el-tag>
+          </el-option>
+        </el-select>
+      </div>
     </div>
-    <cheat-player-card />
   </div>
 </template>
 
@@ -415,6 +525,13 @@ if (address?.value) {
   user-select: none;
   -webkit-user-drag: none;
   -webkit-touch-callout: none;
+  pointer-events: auto;
+}
+
+/* 右上角按钮组 */
+.right-buttons {
+  display: flex;
+  gap: 10px;
   pointer-events: auto;
 }
 
@@ -473,7 +590,31 @@ if (address?.value) {
 }
 
 .panel-open .logo {
-  opacity: 0 !important;     /* 彻底隐藏 logo（推荐） */
-  /* 或者如果你想保留一点存在感：opacity: 0.1; */
+  opacity: 0 !important;
+}
+
+/* 新增：队伍下拉框定位（右下角，玩家列表上方） */
+.team-select-wrapper {
+  position: absolute;
+  right: 20px;
+  bottom: 80px; /* 距离底部80px，避开玩家列表 */
+  z-index: 950; /* 高于玩家列表(900)，低于弹窗 */
+  pointer-events: auto;
+}
+
+/* 下拉弹出层样式（半透明背景） */
+:deep(.team-select-popper) {
+  background: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:deep(.team-select-popper .el-select-dropdown__item) {
+  color: #fff;
+}
+
+:deep(.team-select-popper .el-select-dropdown__item.hover),
+:deep(.team-select-popper .el-select-dropdown__item:hover) {
+  background: rgba(255, 255, 255, 0.15);
 }
 </style>

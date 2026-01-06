@@ -1,12 +1,35 @@
+/* 第三方库样式 */
 @import "leaflet/dist/leaflet.css";
 @import "leaflet.zoomslider/src/L.Control.Zoomslider.css";
 @import "font-awesome/css/font-awesome.css";
+
+/* 自定义样式 */
+@import "@/assets/css/main.css";
 @import "@/assets/css/new.css";
 
+/* 全局重置样式 */
 *,
 *::before,
 *::after {
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* 根元素样式 */
+html {
+    font-size: 16px; /* 设置基础字体大小，便于rem计算 */
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    font-weight: 400;
+    color: var(--text-primary, #303133);
+    background-color: #fff;
 }
 
 html,
@@ -14,16 +37,102 @@ body,
 #app {
     height: 100%;
     width: 100%;
-    margin: 0;
-    padding: 0;
     overflow: hidden;
-    font-family: Avenir, Helvetica, Arial, sans-serif;
 }
 
+/* Element Plus 组件层级优化 */
 body > .el-overlay,
 body > .el-popup,
 body > .el-popper,
 body > .el-select-dropdown,
-body > .el-color-dropdown {
-    z-index: 10000 !important;   /* 比你的设置面板（9999）更高 */
+body > .el-color-dropdown,
+body > .el-picker-panel,
+body > .el-tooltip__popper {
+    z-index: 10000 !important;
+}
+
+/* 输入框和按钮的基础样式优化 */
+input,
+button,
+select,
+textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    background: none;
+    outline: none;
+}
+
+/* 链接样式 */
+a {
+    color: var(--primary-color, #409eff);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: var(--primary-color, #409eff);
+    opacity: 0.8;
+}
+
+/* 图片优化 */
+img {
+    max-width: 100%;
+    height: auto;
+    vertical-align: middle;
+}
+
+/* 表格样式 */
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+/* 列表样式 */
+ul,
+ol {
+    list-style: none;
+}
+
+/* 表单元素样式 */
+input,
+textarea {
+    outline: none;
+    border: 1px solid var(--border-color-base, #dcdfe6);
+    border-radius: var(--border-radius-base, 4px);
+    padding: 8px 12px;
+    transition: border-color 0.3s ease;
+}
+
+input:focus,
+textarea:focus {
+    border-color: var(--primary-color, #409eff);
+}
+
+/* 禁用状态 */
+[disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 选中状态优化 */
+::selection {
+    background-color: var(--primary-color, #409eff);
+    color: #fff;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+    html {
+        font-size: 14px;
+    }
+    
+    body {
+        -webkit-overflow-scrolling: touch;
+    }
 }
