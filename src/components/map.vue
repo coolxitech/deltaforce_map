@@ -22,6 +22,10 @@ const props = defineProps({
     type: Array as () => Player[],
     default: () => [],
   },
+  bots: {
+    type: Array as () => Player[],
+    default: () => [],
+  },
   items: {
     type: Array as () => Item[],
     default: () => [],
@@ -144,13 +148,105 @@ let poiList: L.Marker[] = [];
 let map: L.Map;
 let playerMarkers = new Map<string, L.Marker>();
 let playerViewLines = new Map<string, L.Polyline>();
+
 let boxMarkers = new Map<string, L.Marker>();
 let itemMarkers = new Map<string, L.Marker>();
+
+// 机器人相关的标记单独管理
+let botMarkers: L.Marker[] = [];
+let botViewLines: L.Polyline[] = [];
+let botArrowDecorators: L.PolylineDecorator[] = [];
+
+/**
+ * 清除所有机器人标记
+ */
+const clearAllBots = () => {
+  // 清除机器人标记
+  botMarkers.forEach(marker => {
+    if (map.hasLayer(marker)) {
+      map.removeLayer(marker);
+    }
+  });
+  botMarkers = [];
+
+  // 清除机器人视角线
+  botViewLines.forEach(line => {
+    if (map.hasLayer(line)) {
+      map.removeLayer(line);
+    }
+  });
+  botViewLines = [];
+
+  // 清除机器人箭头装饰
+  botArrowDecorators.forEach(decorator => {
+    if (map.hasLayer(decorator)) {
+      map.removeLayer(decorator);
+    }
+  });
+  botArrowDecorators = [];
+};
+
+/**
+ * 重绘所有机器人
+ */
+const redrawAllBots = (bots: Player[]) => {
+  // 先清除所有现有的机器人
+  clearAllBots();
+
+  // 如果机器人显示被关闭，直接返回
+  if (!botSetting.value.info.display) {
+    return;
+  }
+
+  console.log(`重绘机器人数量: ${bots.length}`); // 调试日志
+
+  // 重新创建所有机器人标记
+  bots.forEach((bot, index) => {
+    if (!bot.position?.x) return;
+
+    console.log(`创建机器人 ${index}:`, bot.position); // 调试日志
+
+    const { x, y } = getUrlParam('type') !== 'ray'
+        ? getMapPos(bot.position.x, bot.position.y)
+        : { x: bot.position.x, y: bot.position.y };
+    const latlng = new L.LatLng(y, x);
+
+    // 创建机器人标记
+    const marker = new L.Marker(latlng, { 
+      icon: createPlayerDivIcon(bot), 
+      zIndexOffset: 1000 
+    }).addTo(map);
+    botMarkers.push(marker);
+
+    // 处理机器人视角线
+    if (playerSetting.value.info.angleViewLine && bot.position.angle != null) {
+      const offset = currLayer.name === 'map_yc' ? -bot.position.angle - 90 : -bot.position.angle;
+      const rad = offset * Math.PI / 180;
+      const shortRayLength = otherSetting.value.rayLength;
+      const pos = getMapPos(bot.position.x, bot.position.y);
+      const shortEndX = pos.x + shortRayLength * Math.cos(rad);
+      const shortEndY = pos.y + shortRayLength * Math.sin(rad);
+
+      const lineStart: [number, number] = [pos.y, pos.x];
+      const lineEnd: [number, number] = [shortEndY, shortEndX];
+
+      const baseLineOptions: L.PolylineOptions = {
+        color: playerSetting.value.color.angleViewLine,
+        weight: otherSetting.value.rayWidth,
+        opacity: otherSetting.value.rayOpacity,
+        interactive: false,
+      };
+
+      const line = new L.Polyline([lineStart, lineEnd], baseLineOptions).addTo(map);
+      botViewLines.push(line);
+    }
+  });
+};
 
 /**
  * 检查当前玩家的瞄准射线是否击中任何其他玩家
  */
-const checkAimHit = (aimingPlayer: Player): string | null => {
+const checkAimHit = (aimingPlayer: Player, allPlayers: Player[]): string | null => {
   if (aimingPlayer.position.angle == null) return null;
 
   const { x: startX, y: startY } = getMapPos(aimingPlayer.position.x, aimingPlayer.position.y);
@@ -164,12 +260,13 @@ const checkAimHit = (aimingPlayer: Player): string | null => {
   let closestTarget: string | null = null;
   let closestDist = Infinity;
 
-  for (const [targetName, targetMarker] of playerMarkers.entries()) {
-    if (targetName === aimingPlayer.name) continue;
+  // 遍历所有玩家而不是依赖playerMarkers
+  for (const targetPlayer of allPlayers) {
+    if (targetPlayer.name === aimingPlayer.name) continue;
 
-    const targetPos = targetMarker.getLatLng();
-    const tx = targetPos.lng;
-    const ty = targetPos.lat;
+    const targetPos = getMapPos(targetPlayer.position.x, targetPlayer.position.y);
+    const tx = targetPos.x;
+    const ty = targetPos.y;
 
     const toTargetX = tx - startX;
     const toTargetY = ty - startY;
@@ -188,7 +285,7 @@ const checkAimHit = (aimingPlayer: Player): string | null => {
 
     if (distance < HIT_RADIUS && proj < closestDist) {
       closestDist = proj;
-      closestTarget = targetName;
+      closestTarget = targetPlayer.name;
     }
   }
 
@@ -547,13 +644,15 @@ watch(() => props.players as Player[], async (newPlayers) => {
   if (!map) return;
   await nextTick();
 
-  const currentNames = new Set<string>();
+  console.log(`地图组件: 收到真实玩家数据 ${newPlayers.length} 个`); // 调试日志
+  
+  const currentRealPlayerNames = new Set<string>();
 
+  // 处理真实玩家（使用增量更新）
   for (const player of newPlayers) {
     if (!player.position?.x || !player.name) continue;
-    if (player.isBot && !botSetting.value.info.display) continue;
-
-    currentNames.add(player.name);
+    
+    currentRealPlayerNames.add(player.name);
 
     const { x, y } = getUrlParam('type') !== 'ray'
         ? getMapPos(player.position.x, player.position.y)
@@ -570,7 +669,7 @@ watch(() => props.players as Player[], async (newPlayers) => {
       playerMarkers.set(player.name, marker);
     }
 
-    // 视角线与箭头
+    // 处理真实玩家的视角线
     if (playerSetting.value.info.angleViewLine && player.position.angle != null) {
       const offset = currLayer.name === 'map_yc' ? -player.position.angle - 90 : -player.position.angle;
       const rad = offset * Math.PI / 180;
@@ -579,15 +678,15 @@ watch(() => props.players as Player[], async (newPlayers) => {
       const shortEndX = pos.x + shortRayLength * Math.cos(rad);
       const shortEndY = pos.y + shortRayLength * Math.sin(rad);
 
-      const targetName = checkAimHit(player);
+      const targetKey = checkAimHit(player, [...newPlayers, ...props.bots]);
       let isAimingEnemy = false;
       let targetLatLng: L.LatLng | null = null;
 
-      if (targetName) {
-        const targetPlayer = newPlayers.find(p => p.name === targetName);
+      if (targetKey) {
+        const targetPlayer = [...newPlayers, ...props.bots].find(p => p.name === targetKey);
         if (targetPlayer && targetPlayer.teamId !== player.teamId) {
           isAimingEnemy = true;
-          const m = playerMarkers.get(targetName);
+          const m = playerMarkers.get(targetKey);
           if (m) targetLatLng = m.getLatLng();
         }
       }
@@ -635,28 +734,45 @@ watch(() => props.players as Player[], async (newPlayers) => {
     } else {
       // 关闭视角线
       const line = playerViewLines.get(player.name);
-      if (line) { map.removeLayer(line); playerViewLines.delete(player.name); }
+      if (line) { 
+        map.removeLayer(line); 
+        playerViewLines.delete(player.name); 
+      }
       const decorator = playerArrowDecorators.get(player.name);
-      if (decorator) { map.removeLayer(decorator); playerArrowDecorators.delete(player.name); }
+      if (decorator) { 
+        map.removeLayer(decorator); 
+        playerArrowDecorators.delete(player.name); 
+      }
     }
   }
 
-  // 清理下线玩家
-  for (const name of playerMarkers.keys()) {
-    if (!currentNames.has(name)) {
-      const marker = playerMarkers.get(name);
+  // 清理下线的真实玩家
+  for (const playerKey of playerMarkers.keys()) {
+    if (!currentRealPlayerNames.has(playerKey)) {
+      const marker = playerMarkers.get(playerKey);
       if (marker) map.removeLayer(marker);
-      playerMarkers.delete(name);
+      playerMarkers.delete(playerKey);
 
-      const line = playerViewLines.get(name);
+      const line = playerViewLines.get(playerKey);
       if (line) map.removeLayer(line);
-      playerViewLines.delete(name);
+      playerViewLines.delete(playerKey);
 
-      const decorator = playerArrowDecorators.get(name);
+      const decorator = playerArrowDecorators.get(playerKey);
       if (decorator) map.removeLayer(decorator);
-      playerArrowDecorators.delete(name);
+      playerArrowDecorators.delete(playerKey);
     }
   }
+}, { immediate: true });
+
+// 单独监听机器人数据
+watch(() => props.bots as Player[], async (newBots) => {
+  if (!map) return;
+  await nextTick();
+
+  console.log(`地图组件: 收到机器人数据 ${newBots.length} 个`); // 调试日志
+
+  // 使用专门的方法重绘所有机器人
+  redrawAllBots(newBots);
 }, { immediate: true });
 
 watch(() => props.boxes as Box[], async (newBoxes) => {

@@ -182,7 +182,7 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
             }
 
             const cheater = raw?.P2.find(cheatPlayer => cheatPlayer.e === 1);
-            const cheaterStoryHeight = cheater.s;
+            const cheaterStoryHeight = cheater?.s;
             return {
                 name: player.h || '未知玩家',
                 isBot: player.c === 1 || player.d === 1,
@@ -256,6 +256,8 @@ export const convert_ray = async (
 
     // ====================== 人机 (a) ======================
     if (raw.a) {
+        console.log('原始机器人数据:', raw.a); // 调试日志
+        
         // 增量更新时先清除所有旧人机（因为服务端不会发全量人机列表）
         if (isDelta && prev) {
             for (const [key, p] of playersMap.entries()) {
@@ -266,14 +268,19 @@ export const convert_ray = async (
         const bots = Array.isArray(raw.a) ? raw.a : raw.a.u ?? [];
         const deletedBotKeys = Array.isArray(raw.a) ? [] : (raw.a.d ?? []).map((b: any) => `bot_${b.cx}_${b.cy}`);
 
+        console.log(`处理机器人数据: ${bots.length} 个机器人`); // 调试日志
+
         // 删除标记的
         deletedBotKeys.forEach(key => playersMap.delete(key));
 
         // 添加/更新
-        bots.forEach((bot: any) => {
+        bots.forEach((bot: any, index: number) => {
             if (bot.d === 0) return; // 已死亡或无效
+            
+            console.log(`创建机器人 ${index}:`, bot); // 调试日志
+            
             const player: Player = {
-                name: 'AI人机',
+                name: 'AI人机', // 恢复原来的统一名字
                 isBot: true,
                 isBoss: bot.b,
                 isCheater: false,

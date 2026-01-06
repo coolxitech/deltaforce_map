@@ -26,6 +26,7 @@ const loadingMessage = ref('挂狗还没进游戏，去找找其他房间吧...'
 let boxes:Ref<Box[]> = ref([]);
 let items:Ref<Item[]> = ref([]);
 let players: Ref<Player[]> = ref([]);
+let rawBots: Ref<Player[]> = ref([]); // 直接存储机器人数据
 let token: string;
 let cheatTeamId: number = 0;
 const cheatTeam: Ref<Player[]> = ref([]);
@@ -133,15 +134,26 @@ const playerHandler = (data: any) => {
     if (!data || !Array.isArray(data.players)) return;
 
     const incomingPlayers = data.players;
+    console.log(`Home.vue: 收到玩家数据 ${incomingPlayers.length} 个`); // 调试日志
+    
+    // 分离真实玩家和机器人
+    const realPlayers = incomingPlayers.filter((p: Player) => !p.isBot);
+    const bots = incomingPlayers.filter((p: Player) => p.isBot);
+    
+    console.log(`Home.vue: 真实玩家 ${realPlayers.length} 个, 机器人 ${bots.length} 个`); // 调试日志
+    
+    // 直接存储机器人数据，不通过PlayerHandler
+    rawBots.value = bots;
+    
     const newNames = new Set();
 
-    // 1. 处理新数据
-    incomingPlayers.forEach((player: Player) => {
+    // 1. 只处理真实玩家数据
+    realPlayers.forEach((player: Player) => {
       newNames.add(player.name);
       playerHandlerInstance.add(player);
     });
 
-    // 2. 移除离开的玩家
+    // 2. 移除离开的真实玩家
     const currentPlayers = playerHandlerInstance.list();
     currentPlayers.forEach(p => {
       if (!newNames.has(p.name)) {
@@ -149,7 +161,7 @@ const playerHandler = (data: any) => {
       }
     });
 
-    // 3. 同步到响应式数组
+    // 3. 同步到响应式数组（只包含真实玩家）
     players.value = playerHandlerInstance.list();
     cheatTeam.value = playerHandlerInstance.listCheaters();
 
@@ -354,7 +366,7 @@ if (address?.value) {
     <!-- 主内容（地图 + loading） -->
     <div class="main-content" v-loading="loading" :element-loading-text="loadingMessage">
       <div class="map-wrapper">
-        <Maps :map="currentMap" :players="players" :items="items" :boxes="boxes">
+        <Maps :map="currentMap" :players="players" :bots="rawBots" :items="items" :boxes="boxes">
           <div class="img_map_mask"></div>
         </Maps>
       </div>

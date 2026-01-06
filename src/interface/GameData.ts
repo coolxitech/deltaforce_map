@@ -130,6 +130,12 @@ export class PlayerHandler {
 
     /** 添加或更新玩家 */
     add(player: Player): void {
+        // 跳过机器人，只处理真实玩家
+        if (player.isBot) {
+            console.log(`PlayerHandler: 跳过机器人处理`); // 调试日志
+            return;
+        }
+
         const key = player.name;
         const existing = this.players.get(key);
 
@@ -165,7 +171,9 @@ export class PlayerHandler {
 
     /** 获取全部玩家（副本） */
     list(): Player[] {
-        return Array.from(this.players.values());
+        const allPlayers = Array.from(this.players.values());
+        console.log(`PlayerHandler.list(): 只返回真实玩家 ${allPlayers.length} 个`); // 调试日志
+        return allPlayers;
     }
 
     /** 获取作弊者列表（副本） */
