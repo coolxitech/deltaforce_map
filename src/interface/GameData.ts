@@ -171,9 +171,7 @@ export class PlayerHandler {
 
     /** 获取全部玩家（副本） */
     list(): Player[] {
-        const allPlayers = Array.from(this.players.values());
-        console.log(`PlayerHandler.list(): 只返回真实玩家 ${allPlayers.length} 个`); // 调试日志
-        return allPlayers;
+        return Array.from(this.players.values());
     }
 
     /** 获取作弊者列表（副本） */
