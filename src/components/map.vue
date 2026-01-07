@@ -727,8 +727,6 @@ watch(() => props.map, (newMap) => {
 watch(() => props.players as Player[], async (newPlayers) => {
   if (!map) return;
   await nextTick();
-
-  console.log(`地图组件: 收到真实玩家数据 ${newPlayers.length} 个`); // 调试日志
   
   const currentRealPlayerNames = new Set<string>();
 
@@ -870,8 +868,6 @@ watch(() => props.players as Player[], async (newPlayers) => {
 watch(() => props.bots as Player[], async (newBots) => {
   if (!map) return;
   await nextTick();
-
-  console.log(`地图组件: 收到机器人数据 ${newBots.length} 个`); // 调试日志
 
   // 使用专门的方法重绘所有机器人
   redrawAllBots(newBots);
