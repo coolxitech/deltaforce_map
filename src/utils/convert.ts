@@ -1,7 +1,7 @@
 import type { RawData as RawData_un } from "@/interface/un/RawData.ts";
 import type { RawData as RawData_ray } from "@/interface/ray/RawData.ts";
 import type { RawData as RawData_other } from "@/interface/other/RawData.ts";
-import type { Position, Item, Player, Map, Box } from "@/interface/GameData.ts";
+import type { Position, Item, Player, Map as GameMap, Box } from "@/interface/GameData.ts";
 /**
  * 角色映射表
  */
@@ -50,11 +50,76 @@ const ROLE_NAME_MAP_CHINESE: Record<string, string> = {
     '0': 'a',
 } as const;
 
-let prevState: {
-    boxes: Box[];
-    items: Item[];
-    players: Player[];
+// Ray数据的全量状态存储
+let rayFullState: {
+    boxes: Map<string, Box>;
+    items: Map<string, Item>;
+    players: Map<string, Player>; // key: `${teamId}_${playerName}`
+    bots: Map<string, Player>;    // key: `bot_${cx}_${cy}_${teamId}`
 } | null = null;
+
+/**
+ * 重置Ray数据状态（用于游戏重新开始时）
+ */
+export function resetRayState(): void {
+    rayFullState = null;
+}
+
+/**
+ * 获取按队伍分组的玩家数据
+ */
+export function getPlayersByTeam(): Map<number, Player[]> {
+    if (!rayFullState) return new Map();
+    
+    const teamMap = new Map<number, Player[]>();
+    
+    // 处理真实玩家
+    rayFullState.players.forEach(player => {
+        const teamId = player.teamId;
+        if (!teamMap.has(teamId)) {
+            teamMap.set(teamId, []);
+        }
+        teamMap.get(teamId)!.push(player);
+    });
+    
+    // 处理人机（队伍ID为-1）
+    const bots = Array.from(rayFullState.bots.values());
+    if (bots.length > 0) {
+        teamMap.set(-1, bots);
+    }
+    
+    return teamMap;
+}
+
+/**
+ * 调试函数：输出当前队伍分布情况
+ */
+export function debugTeamDistribution(): void {
+    if (!rayFullState) {
+        console.log('Ray状态未初始化');
+        return;
+    }
+    
+    const teamMap = getPlayersByTeam();
+    console.log('=== 队伍分布调试信息 ===');
+    console.log('总队伍数:', teamMap.size);
+    
+    teamMap.forEach((players, teamId) => {
+        console.log(`队伍 ${teamId}:`, {
+            玩家数: players.length,
+            玩家列表: players.map(p => ({
+                姓名: p.name,
+                是否人机: p.isBot,
+                是否作弊: p.isCheater,
+                队伍ID: p.teamId
+            }))
+        });
+    });
+    
+    // 检查原始存储的玩家数据
+    console.log('原始玩家存储键值:', Array.from(rayFullState.players.keys()));
+    console.log('原始人机存储键值:', Array.from(rayFullState.bots.keys()));
+}
 
 /**
  * 统一地图配置：名称 + 偏移量
@@ -102,7 +167,7 @@ function applyOffset(pos: { x: number; y: number }, offset: { x: number; y: numb
 export function convert_un(raw: RawData_un, itemsInfo: any[]): {
     boxes: Box[];
     items: Item[];
-    map: Map;
+    map: GameMap;
     players: Player[];
 } {
     const mapId = raw?.M2;
@@ -148,7 +213,7 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
     }
 
     // ========== Map ==========
-    const map: Map = { name: mapName };
+    const map: GameMap = { name: mapName };
 
     // ========== Player ==========
     if (raw?.P2) {
@@ -211,21 +276,19 @@ export function convert_un(raw: RawData_un, itemsInfo: any[]): {
     return { boxes, items, map, players };
 }
 
-export const convert_ray = async (
+export const convert_ray = (
     raw: RawData_ray,
     itemsInfo: any[],
-    cheatTeamId: number,
-    // 可选：外部传入上一帧状态（推荐），不传则内部维护
-    previous?: { boxes: Box[]; items: Item[]; players: Player[] } | null
-): Promise<{
+    cheatTeamId: number
+): {
     boxes: Box[];
     items: Item[];
-    map: Map;
+    map: GameMap;
     players: Player[];
-}> => {
+} => {
     const isDelta = raw.type === 'delta';
 
-    // 地图配置（保持你原来的顺序）
+    // 地图配置
     const MAP_NAME: Record<number, string> = {
         0: '',
         1: 'bks',
@@ -234,179 +297,325 @@ export const convert_ray = async (
         4: 'daba',
         5: 'cxjy',
     };
-    const map: Map = { name: MAP_NAME[raw.m ?? 0] ?? '未知地图' };
+    const map: GameMap = { name: MAP_NAME[raw.m ?? 0] ?? '未知地图' };
 
-    // 使用上一帧状态（优先外部传入）
-    const prev = previous ?? prevState;
-
-    // 初始化最新状态容器（用 Map 方便增删）
-    const boxesMap = new Map<string, Box>();      // key: `${cx},${cy}`
-    const itemsMap = new Map<string, Item>();     // key: `${name}|${cx},${cy}|${grade}|${price}`
-    const playersMap = new Map<string, Player>(); // key: name（真实玩家）或 `bot_${cx}_${cy}`
-
-    // 第一帧或全量时：清空旧数据
-    if (!isDelta || !prev) {
-        // 全量或首次 → 从零开始
-    } else {
-        // 增量 → 先继承上一帧所有数据
-        prev.boxes.forEach(b => boxesMap.set(`${b.position.x},${b.position.y}`, { ...b }));
-        prev.items.forEach(i => itemsMap.set(`${i.name}|${i.position.x},${i.position.y}|${i.grade}|${i.price}`, { ...i }));
-        prev.players.forEach(p => playersMap.set(p.isBot ? `bot_${p.position.x}_${p.position.y}` : p.name, { ...p }));
-    }
-
-    // ====================== 人机 (a) ======================
-    if (raw.a) {
-        console.log('原始机器人数据:', raw.a); // 调试日志
-        
-        // 增量更新时先清除所有旧人机（因为服务端不会发全量人机列表）
-        if (isDelta && prev) {
-            for (const [key, p] of playersMap.entries()) {
-                if (p.isBot) playersMap.delete(key);
-            }
-        }
-
-        const bots = Array.isArray(raw.a) ? raw.a : raw.a.u ?? [];
-        const deletedBotKeys = Array.isArray(raw.a) ? [] : (raw.a.d ?? []).map((b: any) => `bot_${b.cx}_${b.cy}`);
-
-        console.log(`处理机器人数据: ${bots.length} 个机器人`); // 调试日志
-
-        // 删除标记的
-        deletedBotKeys.forEach(key => playersMap.delete(key));
-
-        // 添加/更新
-        bots.forEach((bot: any, index: number) => {
-            if (bot.d === 0) return; // 已死亡或无效
-            
-            console.log(`创建机器人 ${index}:`, bot); // 调试日志
-            
-            const player: Player = {
-                name: 'AI人机', // 恢复原来的统一名字
-                isBot: true,
-                isBoss: bot.b,
-                isCheater: false,
-                role: 0,
-                roleName: 'AI',
-                roleAlias: '人机',
-                weapon: '',
-                health: bot.h ?? 100,
-                helmet: 0,
-                armor: 0,
-                teamId: 0,
-                position: {
-                    x: bot.cx,
-                    y: bot.cy,
-                    z: bot.z ?? 0,
-                },
-            };
-            playersMap.set(`bot_${bot.cx}_${bot.cy}`, player);
-        });
-    }
-
-    // ====================== 盒子 (b) ======================
-    if (raw.b) {
-        const boxList = Array.isArray(raw.b) ? raw.b : raw.b.u ?? [];
-        const deletedBoxKeys = Array.isArray(raw.b) ? [] : (raw.b.d ?? []).map((b: any) => `${b.cx ?? b.x},${b.cy ?? b.y}`);
-
-        deletedBoxKeys.forEach(key => boxesMap.delete(key));
-
-        boxList.forEach((box: any) => {
-            const key = `${box.cx},${box.cy}`;
-            boxesMap.set(key, {
-                isBot: box.i === 0, // 根据实际协议，i=0 通常是人机盒子
-                position: {
-                    x: box.cx,
-                    y: box.cy,
-                    z: box.z ?? 0,
-                },
-            });
-        });
-    }
-
-    // ====================== 物资 (i) ======================
-    if (raw.i) {
-        const itemList = Array.isArray(raw.i) ? raw.i : raw.i.u ?? [];
-        const deletedItemKeys = Array.isArray(raw.i) ? [] : (raw.i.d ?? []).map((i: any) => `${i.n}|${i.cx},${i.cy}|${i.v}|${i.p}`);
-
-        deletedItemKeys.forEach(key => itemsMap.delete(key));
-
-        itemList.forEach((item: any) => {
-            const info = itemsInfo.find(x => x.objectName === item.n);
-            const finalItem: Item = {
-                id: info?.objectID?.toString(),
-                name: info?.objectName ?? item.n,
-                price: info?.avgPrice ?? item.p ?? 0,
-                grade: info?.grade ?? item.v ?? 0,
-                position: {
-                    x: item.cx,
-                    y: item.cy,
-                },
-            };
-            const key = `${finalItem.name}|${finalItem.position.x},${finalItem.position.y}|${finalItem.grade}|${finalItem.price}`;
-            itemsMap.set(key, finalItem);
-        });
-    }
-
-    // ====================== 真实玩家 (p) ======================
-    if (raw.p) {
-        const playerList = Array.isArray(raw.p) ? raw.p : raw.p.u ?? [];
-        const deletedNames = Array.isArray(raw.p) ? [] : (raw.p.d ?? []).map((p: any) => p.n);
-
-        deletedNames.forEach(name => playersMap.delete(name));
-
-        playerList.filter((p: any) => p && p.n); // 防止空对象
-
-        playerList.forEach((p: any) => {
-            const roleKey = ROLE_NAME_MAP_OFFICIAL[p.o] ?? 'default';
-            const player: Player = {
-                name: p.n || '未知玩家',
-                isBot: false,
-                isBoss: false,
-                isCheater: cheatTeamId === p.t,
-                role: p.o,
-                roleName: roleKey,
-                roleAlias: ROLE_ALIAS_MAP[roleKey] ?? '',
-                weapon: p.w || '未知武器',
-                health: p.h ?? 100,
-                helmet: p.hl ?? 0,
-                helmetDurability: p.hh,
-                armor: p.bl ?? 0,
-                armorDurability: p.bh,
-                teamId: p.t ?? 0,
-                position: {
-                    x: p.cx,
-                    y: p.cy,
-                    z: p.z ?? 0,
-                    angle: p.e,
-                },
-            };
-            playersMap.set(p.n, player);
-        });
-    }
-
-    // 转为数组
-    const result = {
-        boxes: Array.from(boxesMap.values()),
-        items: Array.from(itemsMap.values()),
-        map,
-        players: Array.from(playersMap.values()),
-    };
-
-    // 保存状态供下一帧使用
-    if (!previous) {
-        prevState = {
-            boxes: result.boxes.map(b => ({ ...b, position: { ...b.position } })),
-            items: result.items.map(i => ({ ...i, position: { ...i.position } })),
-            players: result.players.map(p => ({ ...p, position: { ...p.position } })),
+    // 初始化全量状态（如果是第一次或者不是增量数据）
+    if (!isDelta || !rayFullState) {
+        rayFullState = {
+            boxes: new Map(),
+            items: new Map(),
+            players: new Map(),
+            bots: new Map(),
         };
     }
 
-    return result;
+    // ====================== 处理人机 (a) ======================
+    if (raw.a) {
+        if (Array.isArray(raw.a)) {
+            // 全量数据：清空后重新添加
+            rayFullState.bots.clear();
+            raw.a.forEach((bot, index) => {
+                if (bot.d !== 0) { // 只添加存活的人机
+                    // 人机使用坐标和索引作为唯一标识，队伍ID设为-1表示中立
+                    const botKey = `bot_${bot.cx}_${bot.cy}_${index}`;
+                    const player: Player = {
+                        name: `AI人机_${index}`, // 给每个人机一个唯一名称
+                        isBot: true,
+                        isBoss: bot.b === 1,
+                        isCheater: false,
+                        role: 0,
+                        roleName: 'AI',
+                        roleAlias: '人机',
+                        weapon: '',
+                        health: bot.h ?? 100,
+                        helmet: 0,
+                        helmetDurability: 0,
+                        armor: 0,
+                        armorDurability: 0,
+                        teamId: -1, // 人机使用-1作为队伍ID
+                        position: {
+                            x: bot.cx,
+                            y: bot.cy,
+                            z: 0,
+                        },
+                    };
+                    rayFullState.bots.set(botKey, player);
+                }
+            });
+        } else {
+            // 增量数据：人机采用销毁重建策略，简单可靠
+            rayFullState.bots.clear();
+            
+            // 处理更新的人机数据
+            if (raw.a.u) {
+                raw.a.u.forEach((bot, index) => {
+                    if (bot.d !== 0) { // 只添加存活的人机
+                        const botKey = `bot_${bot.cx}_${bot.cy}_${index}`;
+                        const player: Player = {
+                            name: `AI人机_${index}`,
+                            isBot: true,
+                            isBoss: bot.b === 1,
+                            isCheater: false,
+                            role: 0,
+                            roleName: 'AI',
+                            roleAlias: '人机',
+                            weapon: '',
+                            health: bot.h ?? 100,
+                            helmet: 0,
+                            helmetDurability: 0,
+                            armor: 0,
+                            armorDurability: 0,
+                            teamId: -1,
+                            position: {
+                                x: bot.cx,
+                                y: bot.cy,
+                                z: 0,
+                            },
+                        };
+                        rayFullState.bots.set(botKey, player);
+                    }
+                });
+            }
+            
+            // 注意：删除操作(raw.a.d)不需要单独处理，因为我们已经清空重建了
+        }
+    }
+
+    // ====================== 处理盒子 (b) ======================
+    if (raw.b) {
+        if (Array.isArray(raw.b)) {
+            // 全量数据：清空后重新添加
+            rayFullState.boxes.clear();
+            raw.b.forEach((box) => {
+                const boxKey = `${box.cx},${box.cy}`;
+                const boxData: Box = {
+                    isBot: box.i === 0,
+                    position: {
+                        x: box.cx,
+                        y: box.cy,
+                        z: box.z ?? 0,
+                    },
+                };
+                rayFullState.boxes.set(boxKey, boxData);
+            });
+        } else {
+            // 增量数据：处理删除和更新
+            if (raw.b.d) {
+                raw.b.d.forEach((box) => {
+                    const boxKey = `${box.cx},${box.cy}`;
+                    rayFullState!.boxes.delete(boxKey);
+                });
+            }
+            if (raw.b.u) {
+                raw.b.u.forEach((box) => {
+                    const boxKey = `${box.cx},${box.cy}`;
+                    const boxData: Box = {
+                        isBot: box.i === 0,
+                        position: {
+                            x: box.cx,
+                            y: box.cy,
+                            z: box.z ?? 0,
+                        },
+                    };
+                    rayFullState!.boxes.set(boxKey, boxData);
+                });
+            }
+        }
+    }
+
+    // ====================== 处理物资 (i) ======================
+    if (raw.i) {
+        if (Array.isArray(raw.i)) {
+            // 全量数据：清空后重新添加
+            rayFullState.items.clear();
+            raw.i.forEach((item) => {
+                const info = itemsInfo.find(x => x.objectName === item.n);
+                const finalItem: Item = {
+                    id: info?.objectID?.toString() ?? item.n,
+                    name: info?.objectName ?? item.n,
+                    price: info?.avgPrice ?? item.p ?? 0,
+                    grade: info?.grade ?? item.v ?? 0,
+                    position: {
+                        x: item.cx,
+                        y: item.cy,
+                    },
+                };
+                const itemKey = `${finalItem.name}|${finalItem.position.x},${finalItem.position.y}|${finalItem.grade}|${finalItem.price}`;
+                rayFullState.items.set(itemKey, finalItem);
+            });
+        } else {
+            // 增量数据：处理删除和更新
+            if (raw.i.d) {
+                raw.i.d.forEach((item) => {
+                    const info = itemsInfo.find(x => x.objectName === item.n);
+                    const name = info?.objectName ?? item.n;
+                    const grade = info?.grade ?? item.v ?? 0;
+                    const price = info?.avgPrice ?? item.p ?? 0;
+                    const itemKey = `${name}|${item.cx},${item.cy}|${grade}|${price}`;
+                    rayFullState!.items.delete(itemKey);
+                });
+            }
+            if (raw.i.u) {
+                raw.i.u.forEach((item) => {
+                    const info = itemsInfo.find(x => x.objectName === item.n);
+                    const finalItem: Item = {
+                        id: info?.objectID?.toString() ?? item.n,
+                        name: info?.objectName ?? item.n,
+                        price: info?.avgPrice ?? item.p ?? 0,
+                        grade: info?.grade ?? item.v ?? 0,
+                        position: {
+                            x: item.cx,
+                            y: item.cy,
+                        },
+                    };
+                    const itemKey = `${finalItem.name}|${finalItem.position.x},${finalItem.position.y}|${finalItem.grade}|${finalItem.price}`;
+                    rayFullState!.items.set(itemKey, finalItem);
+                });
+            }
+        }
+    }
+
+    // ====================== 处理真实玩家 (p) ======================
+    if (raw.p) {
+        if (Array.isArray(raw.p)) {
+            // 全量数据：清空后重新添加
+            rayFullState.players.clear();
+            raw.p.forEach((p) => {
+                // 只添加存活的玩家 (d=0存活, d=1倒地, d=2死亡, f=0存活, f=1死亡)
+                if (p.d !== 2 && p.f !== 1) {
+                    const roleKey = ROLE_NAME_MAP_OFFICIAL[p.o] ?? 'default';
+                    const player: Player = {
+                        name: p.n || '未知玩家',
+                        isBot: false,
+                        isBoss: false,
+                        isCheater: cheatTeamId === p.t,
+                        role: p.o,
+                        roleName: roleKey,
+                        roleAlias: ROLE_ALIAS_MAP[roleKey] ?? '',
+                        weapon: p.w || '未知武器',
+                        health: p.h ?? 100,
+                        helmet: p.hl ?? 0,
+                        helmetDurability: p.hh ?? 0,
+                        armor: p.bl ?? 0,
+                        armorDurability: p.bh ?? 0,
+                        teamId: p.t, // 全量数据中队伍ID是必需的，不使用默认值
+                        position: {
+                            x: p.cx,
+                            y: p.cy,
+                            z: p.z ?? 0,
+                            angle: p.e,
+                        },
+                    };
+                    // 使用队伍ID和玩家名称组合作为唯一标识
+                    const playerKey = `${p.t}_${p.n}`;
+                    rayFullState.players.set(playerKey, player);
+                }
+            });
+        } else {
+            // 增量数据：处理删除和更新
+            if (raw.p.d) {
+                raw.p.d.forEach((p) => {
+                    // 在所有队伍中查找并删除该玩家
+                    for (const [key, existingPlayer] of rayFullState!.players.entries()) {
+                        if (existingPlayer.name === p.n) {
+                            rayFullState!.players.delete(key);
+                            break;
+                        }
+                    }
+                });
+            }
+            if (raw.p.u) {
+                raw.p.u.forEach((p) => {
+                    // 检查玩家是否死亡，如果死亡则删除
+                    if (p.d === 2 || p.f === 1) {
+                        // 需要在所有可能的队伍中查找并删除该玩家
+                        for (const [key, existingPlayer] of rayFullState!.players.entries()) {
+                            if (existingPlayer.name === p.n) {
+                                rayFullState!.players.delete(key);
+                                break;
+                            }
+                        }
+                        return; // 死亡玩家处理完毕，跳过后续更新逻辑
+                    }
+
+                    // 查找现有玩家进行增量更新
+                    let existingPlayer: Player | null = null;
+                    let oldPlayerKey: string | null = null;
+                    
+                    // 在所有队伍中查找该玩家
+                    for (const [key, player] of rayFullState!.players.entries()) {
+                        if (player.name === p.n) {
+                            existingPlayer = player;
+                            oldPlayerKey = key;
+                            break;
+                        }
+                    }
+                    
+                    if (existingPlayer && oldPlayerKey) {
+                        // 增量更新现有玩家，只更新增量数据中提供的属性
+                        const updatedPlayer: Player = {
+                            ...existingPlayer, // 保留原有属性
+                            // 只更新增量数据中明确提供的属性（非undefined）
+                            ...(p.bgl !== undefined && { /* 背包等级暂未在Player接口中定义 */ }),
+                            ...(p.bh !== undefined && { armorDurability: p.bh }),
+                            ...(p.bl !== undefined && { armor: p.bl }),
+                            ...(p.bmh !== undefined && { /* 护甲耐久上限暂未在Player接口中定义 */ }),
+                            ...(p.chl !== undefined && { /* 弹挂等级暂未在Player接口中定义 */ }),
+                            ...(p.h !== undefined && { health: p.h }),
+                            ...(p.hh !== undefined && { helmetDurability: p.hh }),
+                            ...(p.hl !== undefined && { helmet: p.hl }),
+                            ...(p.hmh !== undefined && { /* 头盔耐久上限暂未在Player接口中定义 */ }),
+                            ...(p.k !== undefined && { /* 杀人数暂未在Player接口中定义 */ }),
+                            ...(p.w !== undefined && { weapon: p.w }),
+                            // 角色信息更新
+                            ...(p.o !== undefined && { 
+                                role: p.o,
+                                roleName: ROLE_NAME_MAP_OFFICIAL[p.o] ?? existingPlayer.roleName,
+                                roleAlias: ROLE_ALIAS_MAP[ROLE_NAME_MAP_OFFICIAL[p.o] ?? 'default'] ?? existingPlayer.roleAlias
+                            }),
+                            // 位置信息更新（只更新提供的坐标）
+                            position: {
+                                ...existingPlayer.position,
+                                ...(p.cx !== undefined && { x: p.cx }),
+                                ...(p.cy !== undefined && { y: p.cy }),
+                                ...(p.x !== undefined && { /* 游戏内坐标X，如需要可添加到Position接口 */ }),
+                                ...(p.y !== undefined && { /* 游戏内坐标Y，如需要可添加到Position接口 */ }),
+                                ...(p.z !== undefined && { z: p.z }),
+                                ...(p.e !== undefined && { angle: p.e }),
+                            }
+                        };
+                        
+                        // 保持原有的playerKey，因为队伍ID和玩家名称不会在增量数据中改变
+                        rayFullState!.players.set(oldPlayerKey, updatedPlayer);
+                    } else {
+                        // 增量数据中不应该出现新玩家
+                        // 这种情况说明数据可能有问题，记录警告但不处理
+                        console.warn(`增量更新中发现未知玩家: ${p.n}，增量数据不应包含新玩家，跳过处理`);
+                    }
+                });
+            }
+        }
+    }
+
+    // 合并所有玩家（真实玩家 + 人机）
+    const allPlayers: Player[] = [
+        ...Array.from(rayFullState!.players.values()),
+        ...Array.from(rayFullState!.bots.values())
+    ];
+
+    // 返回当前全量状态
+    return {
+        boxes: Array.from(rayFullState!.boxes.values()),
+        items: Array.from(rayFullState!.items.values()),
+        map,
+        players: allPlayers,
+    };
 };
 
 export const convert_other = (raw: RawData_other, itemsInfo: any[]): {
     boxes: Box[];
     items: Item[];
-    map: Map;
+    map: GameMap;
     players: Player[];
 } => {
     const mapConfig = getMapConfig(raw?.map.replace('map_', '')) ?? DEFAULT_MAP_CONFIG;
@@ -449,7 +658,7 @@ export const convert_other = (raw: RawData_other, itemsInfo: any[]): {
         });
     }
     // ========== Map ==========
-    const map: Map = { name: mapName };
+    const map: GameMap = { name: mapName };
     // ========== Player ==========
     if(raw?.Player) {
         players = raw.Player.map(player => {

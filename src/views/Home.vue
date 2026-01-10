@@ -333,6 +333,7 @@ if (address?.value) {
         if (decoded.t !== undefined && decoded.t !== 0) { // 全量数据
           cheatTeamId = decoded.t;
         }
+        console.debug(decoded);
         gameData = await convert_ray(decoded, itemsInfo.value, cheatTeamId);
         itemHandler(gameData);
         boxHandler(gameData);

@@ -322,10 +322,11 @@ const stopFollowing = () => {
  * 检查当前玩家的瞄准射线是否击中任何其他玩家
  */
 const checkAimHit = (aimingPlayer: Player, allPlayers: Player[]): Player | null => {
+  // 只有当玩家有真实角度数据时才进行瞄准检测
   if (aimingPlayer.position.angle == null) return null;
 
   const { x: startX, y: startY } = getMapPos(aimingPlayer.position.x, aimingPlayer.position.y);
-  const angle = Number(aimingPlayer.position.angle) || 0;
+  const angle = aimingPlayer.position.angle; // 直接使用角度值，此时已确保不为null
   const offset = currLayer.name === 'map_yc' ? -angle - 90 : -angle;
   const rad = offset * Math.PI / 180;
 
@@ -752,15 +753,36 @@ watch(() => props.players as Player[], async (newPlayers) => {
     }
 
     // 处理真实玩家的视角线
-    if (playerSetting.value.info.angleViewLine && player.position.angle != null) {
-      const offset = currLayer.name === 'map_yc' ? -player.position.angle - 90 : -player.position.angle;
+    if (playerSetting.value.info.angleViewLine) {
+      // 如果没有角度数据，使用默认角度0，但要在调试中标明
+      const hasRealAngle = player.position.angle != null;
+      const angle = hasRealAngle ? player.position.angle : 0;
+      
+      console.log(`玩家 ${player.name} 视角线处理:`, {
+        原始角度: player.position.angle,
+        使用角度: angle,
+        有真实角度: hasRealAngle,
+        地图层: currLayer.name,
+        玩家位置: { x: player.position.x, y: player.position.y }
+      });
+      
+      const offset = currLayer.name === 'map_yc' ? -angle - 90 : -angle;
       const rad = offset * Math.PI / 180;
       const shortRayLength = otherSetting.value.rayLength;
       const pos = getMapPos(player.position.x, player.position.y);
       const shortEndX = pos.x + shortRayLength * Math.cos(rad);
       const shortEndY = pos.y + shortRayLength * Math.sin(rad);
 
-      const targetPlayer = checkAimHit(player, [...newPlayers, ...props.bots]);
+      console.log(`角度计算详情:`, {
+        offset偏移: offset,
+        弧度: rad,
+        射线长度: shortRayLength,
+        地图位置: pos,
+        终点: { x: shortEndX, y: shortEndY }
+      });
+
+      // 只有在有真实角度数据时才进行瞄准检测
+      const targetPlayer = hasRealAngle ? checkAimHit(player, [...newPlayers, ...props.bots]) : null;
       let isAimingEnemy = false;
       let targetLatLng: L.LatLng | null = null;
 
@@ -862,7 +884,7 @@ watch(() => props.players as Player[], async (newPlayers) => {
       playerArrowDecorators.delete(playerKey);
     }
   }
-}, { immediate: true });
+}, { immediate: true, deep: true });
 
 // 单独监听机器人数据
 watch(() => props.bots as Player[], async (newBots) => {
@@ -871,7 +893,7 @@ watch(() => props.bots as Player[], async (newBots) => {
 
   // 使用专门的方法重绘所有机器人
   redrawAllBots(newBots);
-}, { immediate: true });
+}, { immediate: true, deep: true });
 
 watch(() => props.boxes as Box[], async (newBoxes) => {
   if (!map) return;
@@ -909,7 +931,7 @@ watch(() => props.boxes as Box[], async (newBoxes) => {
       boxMarkers.delete(key);
     }
   }
-}, { immediate: true });
+}, { immediate: true, deep: true });
 
 watch(() => props.items as Item[], async (newItems) => {
   if (!map) return;
@@ -950,7 +972,7 @@ watch(() => props.items as Item[], async (newItems) => {
       itemMarkers.delete(key);
     }
   }
-}, { immediate: true });
+}, { immediate: true, deep: true });
 
 onMounted(async () => {
   await nextTick();
