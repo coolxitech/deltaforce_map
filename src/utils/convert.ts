@@ -15,7 +15,7 @@ const ROLE_NAME_MAP_OFFICIAL: Record<number, string> = {
     2100654105: 'wl',
     2100654106: 'mxw',
     2100654107: 'fy',
-    2100654108: 'll',
+    2100654108: 'ln',
     2100654109: 'myr',
     2100654110: 'hl',
     2100654115: 'wll',
